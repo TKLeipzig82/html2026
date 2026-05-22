@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Monte-Carlo-Methode: π ermitteln</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        /* Hauptcontainer für nebeneinanderliegendes Layout */
+        #main-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            justify-content: center;
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        /* Linke Seite: Tabelle und Steuerung */
+        #left-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            flex: 1;
+            min-width: 300px;
+        }
+
+        /* Tabellen-Design */
+        table {
+            background: white;
+            border-collapse: collapse;
+            width: 100%;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        th {
+            background-color: #ffeb3b;
+            color: #333;
+            font-weight: bold;
+            font-style: italic;
+            padding: 12px;
+            text-align: center;
+            border-bottom: 2px solid #ccc;
+        }
+
+        td {
+            padding: 10px 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .label-cell {
+            color: #555;
+            font-size: 14px;
+        }
+
+        .label-cell-italic {
+            color: #555;
+            font-size: 14px;
+            font-style: italic;
+        }
+
+        .value-cell {
+            text-align: right;
+            font-weight: bold;
+            color: #000;
+            font-size: 16px;
+            min-width: 120px;
+        }
+
+        /* Bereich für die Buttons */
+        #controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 10px 18px;
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+            background-color: #007bff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            touch-action: manipulation;
+        }
+
+        button:active { transform: scale(0.95); }
+        button:hover { background-color: #0056b3; }
+        
+        button.btn-fast { background-color: #6f42c1; }
+        button.btn-fast:hover { background-color: #5a32a3; }
+        
+        button.btn-reset { background-color: #dc3545; }
+        button.btn-reset:hover { background-color: #c82333; }
+
+        button.btn-formula { background-color: #17a2b8; }
+        button.btn-formula:hover { background-color: #138496; }
+
+        /* Formel Container */
+        #formula-container {
+            display: none; /* Anfangs versteckt */
+            background: #e9ecef;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 5px solid #17a2b8;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .math-fraction {
+            display: inline-block;
+            text-align: center;
+            vertical-align: middle;
+            margin: 0 5px;
+        }
+
+        .math-numerator {
+            border-bottom: 2px solid #333;
+            padding-bottom: 2px;
+            margin-bottom: 2px;
+        }
+
+        .math-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .math-row-large {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+            color: #000;
+        }
+
+        /* Rechte Seite: Grafik */
+        #right-panel {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-width: 300px;
+        }
+
+        #chart-container {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        canvas {
+            display: block;
+            border: 1px solid #ccc;
+            width: 100%;
+            max-width: 450px;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Monte-Carlo-Simulation: π ermitteln</h1>
+
+    <div id="main-container">
+        
+        <div id="left-panel">
+            <table>
+                <thead>
+                    <tr>
+                        <th colspan="2">Berechnung im Einzelnen</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="label-cell">Anzahl der Tropfen im Kreis</td>
+                        <td class="value-cell" id="val-in-circle">0</td>
+                    </tr>
+                    <tr>
+                        <td class="label-cell">Anzahl der Tropfen insgesamt</td>
+                        <td class="value-cell" id="val-total">0</td>
+                    </tr>
+                    <tr style="height: 15px;"><td colspan="2" style="border:none"></td></tr>
+                    <tr>
+                        <td class="label-cell-italic">Näherung für π</td>
+                        <td class="value-cell" id="val-pi-approx">0,00000000</td>
+                    </tr>
+                    <tr>
+                        <td class="label-cell-italic">Exakter Wert für π</td>
+                        <td class="value-cell" id="val-pi-exact">3,14159265</td>
+                    </tr>
+                    <tr style="height: 15px;"><td colspan="2" style="border:none"></td></tr>
+                    <tr>
+                        <td class="label-cell">Abweichung</td>
+                        <td class="value-cell" id="val-deviation">0,00000000</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div id="controls">
+                <button id="btn-roll1">1 Tropfen hinzufügen</button>
+                <button id="btn-roll100" class="btn-fast">100 Tropfen hinzufügen</button>
+                <button id="btn-reset" class="btn-reset">Zurücksetzen</button>
+                <button id="btn-formula" class="btn-formula">Formel einblenden</button>
+            </div>
+
+            <div id="formula-container">
+                <div class="math-row">
+                    <div class="math-fraction">
+                        <div class="math-numerator">Tropfen im Kreis</div>
+                        <div>Tropfen gesamt</div>
+                    </div>
+                    <div>&approx;</div>
+                    <div class="math-fraction">
+                        <div class="math-numerator">Fläche Kreis</div>
+                        <div>Fläche Quadrat</div>
+                    </div>
+                </div>
+                
+                <div class="math-row-large">
+                    <div>&pi; &approx; 4 &middot;</div>
+                    <div class="math-fraction">
+                        <div class="math-numerator">Tropfen im Kreis</div>
+                        <div>Tropfen insgesamt</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="right-panel">
+            <div id="chart-container">
+                <canvas id="mcChart" width="500" height="500"></canvas>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Wir warten, bis die HTML-Seite komplett geladen ist, bevor das Skript startet
+        document.addEventListener("DOMContentLoaded", function() {
+            
+            // 1. Variablen für die Statistik
+            let totalDrops = 0;
+            let dropsInCircle = 0;
+            const EXACT_PI = Math.PI;
+
+            // 2. HTML-Elemente abgreifen
+            const elInCircle = document.getElementById('val-in-circle');
+            const elTotal = document.getElementById('val-total');
+            const elPiApprox = document.getElementById('val-pi-approx');
+            const elPiExact = document.getElementById('val-pi-exact');
+            const elDeviation = document.getElementById('val-deviation');
+            
+            const btnRoll1 = document.getElementById('btn-roll1');
+            const btnRoll100 = document.getElementById('btn-roll100');
+            const btnReset = document.getElementById('btn-reset');
+            const btnFormula = document.getElementById('btn-formula');
+            const formulaContainer = document.getElementById('formula-container');
+
+            const canvas = document.getElementById('mcChart');
+            const ctx = canvas.getContext('2d');
+            const C_SIZE = canvas.width; 
+            const HALF_SIZE = C_SIZE / 2; 
+
+            // Exakten Pi-Wert eintragen
+            elPiExact.innerText = EXACT_PI.toFixed(8).replace('.', ',');
+
+            // 3. Hilfsfunktionen
+            function simToCanvas(coord) {
+                return HALF_SIZE + (coord * HALF_SIZE);
+            }
+
+            function simToCanvasY(coord) {
+                return HALF_SIZE - (coord * HALF_SIZE);
+            }
+
+            function drawBaseMap() {
+                ctx.clearRect(0, 0, C_SIZE, C_SIZE);
+
+                ctx.beginPath();
+                ctx.moveTo(0, HALF_SIZE); ctx.lineTo(C_SIZE, HALF_SIZE); 
+                ctx.moveTo(HALF_SIZE, 0); ctx.lineTo(HALF_SIZE, C_SIZE); 
+                ctx.strokeStyle = '#ccc';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                ctx.fillStyle = '#666';
+                ctx.font = 'bold 12px sans-serif';
+                ctx.textBaseline = 'middle';
+                
+                ctx.textAlign = 'left'; ctx.fillText('-1', 5, HALF_SIZE + 10);
+                ctx.textAlign = 'center'; ctx.fillText('0', HALF_SIZE + 10, HALF_SIZE + 10);
+                ctx.textAlign = 'right'; ctx.fillText('1', C_SIZE - 5, HALF_SIZE + 10);
+                
+                ctx.textAlign = 'right'; ctx.fillText('1', HALF_SIZE - 5, 10);
+                ctx.textAlign = 'right'; ctx.fillText('-1', HALF_SIZE - 5, C_SIZE - 10);
+
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(0, 0, C_SIZE, C_SIZE);
+
+                ctx.beginPath();
+                ctx.arc(HALF_SIZE, HALF_SIZE, HALF_SIZE, 0, 2 * Math.PI);
+                ctx.stroke();
+            }
+
+            function addSingleDrop() {
+                const xSim = Math.random() * 2 - 1; 
+                const ySim = Math.random() * 2 - 1;
+
+                totalDrops++;
+
+                const isInCircle = (xSim * xSim) + (ySim * ySim) <= 1;
+
+                if (isInCircle) {
+                    dropsInCircle++;
+                }
+
+                drawDrop(xSim, ySim, isInCircle);
+            }
+
+            function drawDrop(xSim, ySim, isInCircle) {
+                const xPx = simToCanvas(xSim);
+                const yPx = simToCanvasY(ySim);
+
+                ctx.beginPath();
+                ctx.arc(xPx, yPx, 4, 0, 2 * Math.PI); // Radius 4 für gute Sichtbarkeit
+                
+                if (isInCircle) {
+                    ctx.fillStyle = '#007bff'; // Blau im Kreis
+                } else {
+                    ctx.fillStyle = '#dc3545'; // Rot außerhalb
+                }
+                ctx.fill();
+            }
+
+            function updateTable() {
+                elInCircle.innerText = dropsInCircle;
+                elTotal.innerText = totalDrops;
+
+                if (totalDrops === 0) {
+                    elPiApprox.innerText = "0,00000000";
+                    elDeviation.innerText = "0,00000000";
+                    return;
+                }
+
+                const piApprox = 4 * (dropsInCircle / totalDrops);
+                const deviation = Math.abs(EXACT_PI - piApprox);
+
+                elPiApprox.innerText = piApprox.toFixed(8).replace('.', ',');
+                elDeviation.innerText = deviation.toFixed(8).replace('.', ',');
+            }
+
+            // 4. Initialisierung: Einmal das leere Feld zeichnen
+            drawBaseMap();
+
+            // 5. Button Klick-Ereignisse verknüpfen
+            btnRoll1.addEventListener('click', function() {
+                addSingleDrop(); 
+                updateTable();
+            });
+
+            btnRoll100.addEventListener('click', function() {
+                for (let i = 0; i < 100; i++) {
+                    addSingleDrop();
+                }
+                updateTable();
+            });
+
+            btnReset.addEventListener('click', function() {
+                totalDrops = 0;
+                dropsInCircle = 0;
+                updateTable();
+                drawBaseMap();
+            });
+
+            btnFormula.addEventListener('click', function() {
+                if (formulaContainer.style.display === 'none' || formulaContainer.style.display === '') {
+                    formulaContainer.style.display = 'block';
+                    btnFormula.innerText = 'Formel ausblenden';
+                } else {
+                    formulaContainer.style.display = 'none';
+                    btnFormula.innerText = 'Formel einblenden';
+                }
+            });
+
+        }); // Ende DOMContentLoaded
+    </script>
+</body>
+</html>

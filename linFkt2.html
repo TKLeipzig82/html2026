@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Lineare Funktionen erkennen</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+
+        .instruction {
+            font-size: 16px;
+            color: #555;
+            margin-bottom: 25px;
+            text-align: center;
+            max-width: 800px;
+        }
+
+        #app-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            justify-content: center;
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        #canvas-container {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas {
+            background: #ffffff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            max-width: 100%;
+            height: auto;
+        }
+
+        #controls-panel {
+            flex: 1;
+            min-width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .options-box {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .options-box h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 18px;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 10px 15px;
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.2s;
+        }
+
+        .radio-option:hover {
+            border-color: #007bff;
+            background: #eef6ff;
+        }
+
+        .radio-option input {
+            margin-right: 10px;
+            transform: scale(1.2);
+            cursor: pointer;
+        }
+
+        /* NEU: CSS für echte waagerechte Bruchstriche */
+        .math-fraction {
+            display: inline-block;
+            vertical-align: middle;
+            text-align: center;
+            font-size: 0.85em;
+            margin: 0 4px;
+            line-height: 1.1;
+        }
+
+        .math-num {
+            border-bottom: 1.5px solid #333;
+            display: block;
+            padding: 0 3px;
+        }
+
+        .math-den {
+            display: block;
+            padding: 0 3px;
+        }
+
+        .stats-box {
+            display: flex;
+            justify-content: space-between;
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .stat-correct { color: #28a745; }
+        .stat-wrong { color: #dc3545; }
+        .stat-total { color: #007bff; }
+
+        #feedback-banner {
+            display: none;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+            color: white;
+        }
+
+        .feedback-correct { background-color: #28a745; }
+        .feedback-wrong { background-color: #dc3545; }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            background-color: #007bff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        button:active { transform: scale(0.97); }
+        button:hover { background-color: #0056b3; }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        button.btn-next { background-color: #6f42c1; }
+        button.btn-next:hover { background-color: #5a32a3; }
+
+    </style>
+</head>
+<body>
+
+    <h1>Lineare Funktionen erkennen</h1>
+    <div class="instruction">
+        Finde die passende Funktionsgleichung zum abgebildeten Graph. Du kannst dein Ergebnis durch Anklicken des Kästchens prüfen.
+    </div>
+
+    <div id="app-container">
+        
+        <div id="canvas-container">
+            <canvas id="mathCanvas" width="500" height="500"></canvas>
+        </div>
+
+        <div id="controls-panel">
+            
+            <div class="stats-box">
+                <div class="stat-correct">Richtig: <span id="val-correct">0</span></div>
+                <div class="stat-wrong">Falsch: <span id="val-wrong">0</span></div>
+                <div class="stat-total">Gesamt: <span id="val-total">0</span></div>
+            </div>
+
+            <div id="feedback-banner"></div>
+
+            <div class="options-box" id="options-container">
+                <h3>Funktionsgleichungen:</h3>
+            </div>
+
+            <div class="btn-group">
+                <button id="btn-check" disabled>Überprüfen</button>
+                <button id="btn-next" class="btn-next">Neue Funktion</button>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const canvas = document.getElementById('mathCanvas');
+        const ctx = canvas.getContext('2d');
+        const optionsContainer = document.getElementById('options-container');
+        const btnCheck = document.getElementById('btn-check');
+        const btnNext = document.getElementById('btn-next');
+        const feedbackBanner = document.getElementById('feedback-banner');
+
+        const elCorrect = document.getElementById('val-correct');
+        const elWrong = document.getElementById('val-wrong');
+        const elTotal = document.getElementById('val-total');
+
+        const W = canvas.width;
+        const H = canvas.height;
+        const ORIGIN = W / 2;
+        const SCALE = 50; 
+
+        let currentOptions = [];
+        let targetIndex = -1;
+        let selectedIndex = -1;
+        let isChecked = false;
+        
+        let stats = { correct: 0, wrong: 0, total: 0 };
+
+        function getRandomElement(arr) {
+            return arr[Math.floor(Math.random() * arr.length)];
+        }
+
+        function shuffleArray(arr) {
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+        }
+
+        function formatTerm(mNum, mDen, n) {
+            let res = "";
+            let val = mNum / mDen;
+            let absN = Math.abs(mNum);
+            let absD = Math.abs(mDen);
+            let sign = val < 0 ? "-" : "";
+
+            if (val === 1) {
+                res += "x";
+            } else if (val === -1) {
+                res += "-x";
+            } else if (absD === 1) {
+                res += sign + absN + "x";
+            } else {
+                // NEU: Waagerechter Bruchstrich
+                res += sign + "<span class='math-fraction'><span class='math-num'>" + absN + "</span><span class='math-den'>" + absD + "</span></span> x";
+            }
+
+            if (n > 0) {
+                res += res !== "" ? " + " + n : n;
+            } else if (n < 0) {
+                res += res !== "" ? " - " + Math.abs(n) : "- " + Math.abs(n);
+            }
+
+            return res === "" ? "0" : res;
+        }
+
+        function getCanvasX(mathX) { return ORIGIN + (mathX * SCALE); }
+        function getCanvasY(mathY) { return ORIGIN - (mathY * SCALE); }
+
+        function drawCoordinateSystem() {
+            ctx.clearRect(0, 0, W, H);
+            ctx.strokeStyle = '#e9ecef';
+            ctx.lineWidth = 1;
+            for (let i = -5; i <= 5; i++) {
+                ctx.beginPath(); ctx.moveTo(getCanvasX(i), 0); ctx.lineTo(getCanvasX(i), H); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, getCanvasY(i)); ctx.lineTo(W, getCanvasY(i)); ctx.stroke();
+            }
+
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(0, ORIGIN); ctx.lineTo(W, ORIGIN); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(ORIGIN, 0); ctx.lineTo(ORIGIN, H); ctx.stroke();
+
+            ctx.fillStyle = '#333';
+            ctx.beginPath(); ctx.moveTo(W, ORIGIN); ctx.lineTo(W - 10, ORIGIN - 5); ctx.lineTo(W - 10, ORIGIN + 5); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(ORIGIN, 0); ctx.lineTo(ORIGIN - 5, 10); ctx.lineTo(ORIGIN + 5, 10); ctx.fill();
+
+            ctx.font = 'bold 14px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('x', W - 15, ORIGIN + 20);
+            ctx.fillText('y', ORIGIN + 15, 15);
+
+            ctx.font = '12px sans-serif';
+            for (let i = -5; i <= 5; i++) {
+                if (i !== 0) {
+                    ctx.fillText(i, getCanvasX(i), ORIGIN + 15);
+                    ctx.fillText(i, ORIGIN - 15, getCanvasY(i));
+                }
+            }
+            ctx.fillText('0', ORIGIN - 10, ORIGIN + 15);
+        }
+
+        function drawFunction(mNum, mDen, n, color, isDashed, thickness) {
+            let m = mNum / mDen;
+            let y1 = m * (-5) + n;
+            let y2 = m * (5) + n;
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(0, 0, W, H);
+            ctx.clip();
+            ctx.beginPath();
+            ctx.moveTo(getCanvasX(-5), getCanvasY(y1));
+            ctx.lineTo(getCanvasX(5), getCanvasY(y2));
+            ctx.strokeStyle = color;
+            ctx.lineWidth = thickness;
+            if (isDashed) ctx.setLineDash([10, 10]);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function renderGraph() {
+            drawCoordinateSystem();
+            let target = currentOptions[targetIndex];
+            drawFunction(target.mNum, target.mDen, target.n, '#007bff', false, 4);
+
+            if (isChecked && selectedIndex !== -1) {
+                let selected = currentOptions[selectedIndex];
+                drawFunction(selected.mNum, selected.mDen, selected.n, '#dc3545', true, 4);
+            }
+        }
+
+        function initRound() {
+            isChecked = false;
+            selectedIndex = -1;
+            btnCheck.disabled = true;
+            feedbackBanner.style.display = 'none';
+
+            let possibleM = [-5, -4, -3, -2, 2, 3, 4, 5];
+            let m = getRandomElement(possibleM);
+            let possibleN = [-5, -4, -3, -2, -1, 1, 2, 3, 4, 5].filter(val => val !== m);
+            let n = getRandomElement(possibleN);
+
+            let funcData = [
+                { id: 'f1', mNum: m, mDen: 1, n: n },
+                { id: 'f2', mNum: n, mDen: 1, n: m },
+                { id: 'f3', mNum: m, mDen: 1, n: -n },
+                { id: 'f4', mNum: 1, mDen: m, n: n },
+                { id: 'f5', mNum: n, mDen: 1, n: -m }
+            ];
+
+            currentOptions = funcData.map(f => ({
+                mNum: f.mNum, mDen: f.mDen, n: f.n,
+                text: formatTerm(f.mNum, f.mDen, f.n),
+                isTarget: (f.id === 'f1')
+            }));
+
+            shuffleArray(currentOptions);
+            targetIndex = currentOptions.findIndex(opt => opt.isTarget);
+
+            optionsContainer.innerHTML = '<h3>Funktionsgleichungen:</h3>';
+            currentOptions.forEach((opt, index) => {
+                let label = document.createElement('label');
+                label.className = 'radio-option';
+                
+                // Wir nutzen display:flex bei radio-option für ein besseres Layout mit den echten Brüchen
+                label.innerHTML = `
+                    <input type="radio" name="func" value="${index}">
+                    <span style="white-space: nowrap;">f<sub>${index + 1}</sub>(x) = ${opt.text}</span>
+                `;
+                label.querySelector('input').addEventListener('change', (e) => {
+                    if (!isChecked) {
+                        selectedIndex = parseInt(e.target.value);
+                        btnCheck.disabled = false;
+                    }
+                });
+                optionsContainer.appendChild(label);
+            });
+
+            renderGraph();
+        }
+
+        btnCheck.addEventListener('click', () => {
+            if (selectedIndex === -1 || isChecked) return;
+
+            isChecked = true;
+            btnCheck.disabled = true;
+            
+            document.querySelectorAll('input[name="func"]').forEach(input => {
+                input.disabled = true;
+            });
+
+            stats.total++;
+            if (selectedIndex === targetIndex) {
+                stats.correct++;
+                feedbackBanner.textContent = "Richtig! Die Graphen sind deckungsgleich.";
+                feedbackBanner.className = "feedback-correct";
+            } else {
+                stats.wrong++;
+                feedbackBanner.textContent = "Leider falsch! Hier siehst du zum Vergleich deine Wahl (rot).";
+                feedbackBanner.className = "feedback-wrong";
+            }
+            
+            feedbackBanner.style.display = 'block';
+            elCorrect.innerText = stats.correct;
+            elWrong.innerText = stats.wrong;
+            elTotal.innerText = stats.total;
+
+            renderGraph();
+        });
+
+        btnNext.addEventListener('click', initRound);
+
+        initRound();
+    </script>
+</body>
+</html>
