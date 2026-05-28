@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Interaktiver Dreisatz-Trainer</title>
+    <style>
+        body { font-family: sans-serif; background: #fdf6e3; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .box { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); max-width: 500px; width: 100%; border: 3px solid #2aa198; }
+        h2 { color: #2aa198; margin-top: 0; }
+        .task { background: #eee; padding: 15px; border-radius: 8px; font-weight: bold; margin-bottom: 20px; min-height: 50px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 2px solid #ddd; padding: 10px; text-align: center; }
+        input { width: 60px; padding: 8px; font-size: 16px; text-align: center; border: 2px solid #ccc; border-radius: 5px; }
+        .correct { background-color: #c1e1c1; border-color: #2e7d32; }
+        .wrong { background-color: #ffc1c1; border-color: #c62828; }
+        button { width: 100%; padding: 12px; font-size: 18px; font-weight: bold; cursor: pointer; border: none; border-radius: 8px; background: #268bd2; color: white; }
+    </style>
+</head>
+<body>
+
+<div class="box">
+    <h2>Dreisatz-Trainer</h2>
+    <div class="task" id="task-text">Lade Aufgabe...</div>
+    
+    <table>
+        <tr><th id="unit-left">Menge</th><th id="unit-right">Preis</th></tr>
+        <tr>
+            <td><span id="start-val-l">3</span></td>
+            <td><span id="start-val-r">6</span></td>
+        </tr>
+        <tr>
+            <td><input type="number" id="mid-l"></td>
+            <td><input type="number" id="mid-r"></td>
+        </tr>
+        <tr>
+            <td><input type="number" id="end-l"></td>
+            <td><input type="number" id="end-r"></td>
+        </tr>
+    </table>
+
+    <button onclick="check()">Ergebnis prüfen</button>
+    <button onclick="newTask()" style="background:#859900; margin-top:10px;">Neue Aufgabe</button>
+</div>
+
+<script>
+    let currentTask = {};
+
+    function newTask() {
+        const items = [
+            {n: "Äpfel", u1: "kg", u2: "€", p: 2},
+            {n: "Hefte", u1: "Stück", u2: "€", p: 0.5},
+            {n: "Eiswürfel", u1: "Beutel", u2: "€", p: 3}
+        ];
+        const item = items[Math.floor(Math.random()*items.length)];
+        const startQty = Math.floor(Math.random() * 5) + 2;
+        const endQty = Math.floor(Math.random() * 8) + 2;
+        if(startQty === endQty) return newTask();
+
+        currentTask = {
+            sL: startQty, sR: startQty * item.p,
+            mL: 1, mR: item.p,
+            eL: endQty, eR: endQty * item.p
+        };
+
+        document.getElementById('task-text').innerText = `${currentTask.sL} ${item.u1} ${item.n} kosten ${currentTask.sR} ${item.u2}. Berechne den Preis für ${currentTask.eL} ${item.u1}!`;
+        document.getElementById('unit-left').innerText = item.u1;
+        document.getElementById('unit-right').innerText = item.u2;
+        document.getElementById('start-val-l').innerText = currentTask.sL;
+        document.getElementById('start-val-r').innerText = currentTask.sR;
+        
+        // Inputs leeren
+        document.querySelectorAll('input').forEach(i => { i.value = ''; i.className = ''; });
+    }
+
+    function check() {
+        const checkField = (id, target) => {
+            const el = document.getElementById(id);
+            if(parseFloat(el.value) === target) el.className = 'correct';
+            else el.className = 'wrong';
+        };
+
+        checkField('mid-l', currentTask.mL);
+        checkField('mid-r', currentTask.mR);
+        checkField('end-l', currentTask.eL);
+        checkField('end-r', currentTask.eR);
+    }
+
+    window.onload = newTask;
+</script>
+
+</body>
+</html>

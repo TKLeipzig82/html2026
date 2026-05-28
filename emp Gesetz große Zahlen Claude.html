@@ -1,0 +1,176 @@
+
+<h2 class="sr-only">Interaktive Simulation: Relative Häufigkeit einer 6 beim Würfeln</h2>
+<style>
+.stat-card { border-radius: 10px; padding: 0.9rem 0.75rem; text-align: center; }
+.stat-label { font-size: 12px; margin: 0 0 4px; font-weight: 500; }
+.stat-value { font-size: 22px; font-weight: 500; margin: 0; }
+.btn-roll { border-radius: 10px; padding: 11px 18px; font-size: 15px; font-weight: 500; cursor: pointer; border: 2px solid; transition: filter 0.12s, transform 0.1s; }
+.btn-roll:active { transform: scale(0.96); filter: brightness(0.9); }
+.btn-reset { border-radius: 10px; padding: 11px 18px; font-size: 14px; font-weight: 500; cursor: pointer; border: 2px solid #B4B2A9; background: #F1EFE8; color: #5F5E5A; transition: filter 0.12s, transform 0.1s; }
+.btn-reset:active { transform: scale(0.96); }
+</style>
+
+<div style="padding: 1rem 0;">
+
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; margin-bottom: 1.25rem;">
+    <div class="stat-card" style="background:#E6F1FB;">
+      <p class="stat-label" style="color:#185FA5;">Letzter Wurf</p>
+      <div style="font-size:46px;line-height:1.1;" id="diceEmoji">—</div>
+    </div>
+    <div class="stat-card" style="background:#EAF3DE;">
+      <p class="stat-label" style="color:#3B6D11;">Würfe gesamt</p>
+      <p class="stat-value" style="color:#27500A;" id="totalRolls">0</p>
+    </div>
+    <div class="stat-card" style="background:#FAEEDA;">
+      <p class="stat-label" style="color:#854F0B;">Anzahl Sechsen</p>
+      <p class="stat-value" style="color:#633806;" id="countSix">0</p>
+    </div>
+    <div class="stat-card" style="background:#FBEAF0;">
+      <p class="stat-label" style="color:#993556;">Rel. Häufigkeit ⚅</p>
+      <p class="stat-value" style="color:#72243E;" id="relFreq">—</p>
+    </div>
+  </div>
+
+  <div style="display: flex; gap: 10px; margin-bottom: 1.25rem; flex-wrap: wrap; align-items: center;">
+    <button class="btn-roll" style="background:#E6F1FB; color:#0C447C; border-color:#85B7EB;" onclick="rollDice(1)">
+      <i class="ti ti-dice-5" aria-hidden="true"></i> 1 × würfeln
+    </button>
+    <button class="btn-roll" style="background:#EAF3DE; color:#27500A; border-color:#97C459;" onclick="rollDice(10)">
+      10 × würfeln
+    </button>
+    <button class="btn-roll" style="background:#FAEEDA; color:#633806; border-color:#EF9F27;" onclick="rollDice(100)">
+      100 × würfeln
+    </button>
+    <button class="btn-reset" onclick="resetAll()">
+      <i class="ti ti-refresh" aria-hidden="true"></i> Zurücksetzen
+    </button>
+  </div>
+
+  <div style="display:flex; gap:20px; margin-bottom:8px; font-size:12px; color:#5F5E5A; flex-wrap:wrap;">
+    <span style="display:flex;align-items:center;gap:5px;">
+      <span style="width:18px;height:3px;background:#185FA5;display:inline-block;border-radius:2px;"></span>
+      Rel. Häufigkeit (⚅)
+    </span>
+    <span style="display:flex;align-items:center;gap:5px;">
+      <span style="width:18px;height:0;border-top:2px dashed #D85A30;display:inline-block;"></span>
+      Theor. Wahrscheinlichkeit 1/6 ≈ 0,1667
+    </span>
+  </div>
+
+  <div style="position: relative; width: 100%; height: 300px;">
+    <canvas id="chart" role="img" aria-label="Liniendiagramm der relativen Häufigkeit der Augenzahl 6 über bis zu 500 Würfe">Zeigt die Annäherung der relativen Häufigkeit an 1/6.</canvas>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const DICE_EMOJI = ['','⚀','⚁','⚂','⚃','⚄','⚅'];
+const MAX_X = 500;
+let totalRolls = 0, countSix = 0;
+
+const labels = Array.from({length: MAX_X}, (_,i) => i+1);
+const freqData = new Array(MAX_X).fill(null);
+const theoData = new Array(MAX_X).fill(1/6);
+
+const ctx = document.getElementById('chart').getContext('2d');
+const chart = new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: labels,
+    datasets: [
+      {
+        label: 'Rel. Häufigkeit',
+        data: freqData,
+        borderColor: '#185FA5',
+        backgroundColor: 'rgba(24,95,165,0.07)',
+        borderWidth: 2.5,
+        pointRadius: 0,
+        pointHoverRadius: 5,
+        tension: 0.15,
+        fill: false,
+        spanGaps: false,
+      },
+      {
+        label: '1/6',
+        data: theoData,
+        borderColor: '#D85A30',
+        borderWidth: 1.5,
+        borderDash: [7, 5],
+        pointRadius: 0,
+        fill: false,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 0 },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        filter: (item) => item.datasetIndex === 0 && item.parsed.y !== null,
+        callbacks: {
+          title: (items) => 'Wurf Nr. ' + items[0].label,
+          label: (ctx) => 'Rel. Häufigkeit: ' + ctx.parsed.y.toFixed(4)
+        }
+      }
+    },
+    scales: {
+      x: {
+        min: 0,
+        max: MAX_X,
+        type: 'linear',
+        title: { display: true, text: 'Anzahl Würfe', color: '#888780', font: { size: 12 } },
+        ticks: {
+          color: '#888780',
+          font: { size: 11 },
+          stepSize: 50,
+          maxTicksLimit: 11,
+          callback: v => v
+        },
+        grid: { color: 'rgba(136,135,128,0.12)' }
+      },
+      y: {
+        min: 0,
+        max: 1,
+        ticks: {
+          color: '#888780',
+          font: { size: 11 },
+          stepSize: 0.1,
+          callback: v => v.toFixed(1)
+        },
+        grid: { color: 'rgba(136,135,128,0.12)' },
+        title: { display: true, text: 'Relative Häufigkeit', color: '#888780', font: { size: 12 } }
+      }
+    }
+  }
+});
+
+function rollDice(n) {
+  let lastRoll;
+  for (let i = 0; i < n; i++) {
+    if (totalRolls >= MAX_X) break;
+    lastRoll = Math.floor(Math.random() * 6) + 1;
+    totalRolls++;
+    if (lastRoll === 6) countSix++;
+    freqData[totalRolls - 1] = countSix / totalRolls;
+  }
+  if (!lastRoll) return;
+  document.getElementById('diceEmoji').textContent = DICE_EMOJI[lastRoll];
+  document.getElementById('totalRolls').textContent = totalRolls;
+  document.getElementById('countSix').textContent = countSix;
+  document.getElementById('relFreq').textContent = (countSix / totalRolls).toFixed(4);
+  chart.update();
+}
+
+function resetAll() {
+  totalRolls = 0; countSix = 0;
+  freqData.fill(null);
+  document.getElementById('diceEmoji').textContent = '—';
+  document.getElementById('totalRolls').textContent = '0';
+  document.getElementById('countSix').textContent = '0';
+  document.getElementById('relFreq').textContent = '—';
+  chart.update();
+}
+</script>

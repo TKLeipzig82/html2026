@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Würfel-Simulation: Relative Häufigkeit der 6 | Unterricht</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(145deg, #f8fafc 0%, #eef2f7 100%);
+            margin: 0;
+            min-height: 100vh;
+            padding: 2rem 1.5rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .card {
+            max-width: 1100px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.97);
+            border-radius: 2.5rem;
+            box-shadow: 0 25px 45px -12px rgba(0, 0, 0, 0.3);
+            padding: 1.8rem 2rem 2rem 2rem;
+            transition: all 0.2s;
+            backdrop-filter: blur(0px);
+            border: 1px solid rgba(255,255,240,0.6);
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #1e293b, #2d4a6e);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin: 0 0 0.25rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .sub {
+            color: #475569;
+            border-left: 4px solid #f59e0b;
+            padding-left: 1rem;
+            margin-bottom: 1.8rem;
+            font-weight: 450;
+        }
+
+        .dashboard {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            align-items: stretch;
+        }
+
+        .control-panel {
+            flex: 1.2;
+            min-width: 240px;
+            background: #f1f5f9;
+            border-radius: 2rem;
+            padding: 1.2rem 1.5rem;
+            box-shadow: inset 0 1px 2px #0000, 0 4px 8px rgba(0,0,0,0.05);
+        }
+
+        .stats-panel {
+            flex: 1.8;
+            min-width: 260px;
+            background: #ffffffd9;
+            border-radius: 2rem;
+            padding: 1.2rem 1.5rem;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+        }
+
+        .wuerfel-btn {
+            background: #f97316;
+            border: none;
+            color: white;
+            font-size: 1.8rem;
+            font-weight: bold;
+            padding: 0.8rem 1.2rem;
+            border-radius: 60px;
+            width: 100%;
+            cursor: pointer;
+            transition: 0.15s linear;
+            box-shadow: 0 8px 0 #b45309;
+            margin-bottom: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .wuerfel-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 4px 0 #b45309;
+        }
+
+        .reset-btn {
+            background: #334155;
+            box-shadow: 0 4px 0 #1e293b;
+            font-size: 1rem;
+            margin-top: 0.5rem;
+            transform: none;
+        }
+        .reset-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #1e293b;
+        }
+
+        .last-roll {
+            background: #fff7ed;
+            border-radius: 2rem;
+            padding: 0.8rem;
+            text-align: center;
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin: 1rem 0;
+            border: 1px solid #fed7aa;
+        }
+        .last-roll span {
+            font-size: 2rem;
+            background: #ffedd5;
+            display: inline-block;
+            padding: 0.3rem 1rem;
+            border-radius: 60px;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin: 0.25rem 0;
+        }
+        .stat-label {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #475569;
+        }
+
+        hr {
+            margin: 1rem 0;
+            border-color: #e2e8f0;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 1.5rem;
+            padding: 1rem;
+            box-shadow: 0 8px 18px rgba(0,0,0,0.1);
+            margin-top: 1rem;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            background: #ffffff;
+            border-radius: 1rem;
+            cursor: pointer;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 0.8rem;
+            font-size: 0.85rem;
+        }
+
+        .legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .color-box {
+            width: 20px;
+            height: 4px;
+            border-radius: 4px;
+        }
+        .color-dashed {
+            width: 20px;
+            height: 2px;
+            background: repeating-linear-gradient(90deg, #2563eb, #2563eb 4px, transparent 4px, transparent 8px);
+        }
+
+        footer {
+            margin-top: 2rem;
+            text-align: center;
+            font-size: 0.75rem;
+            color: #62748c;
+            border-top: 1px solid #cbd5e1;
+            padding-top: 1.2rem;
+        }
+
+        button {
+            font-weight: 600;
+            border: none;
+            color: white;
+            cursor: pointer;
+            border-radius: 40px;
+            transition: all 0.1s ease;
+        }
+
+        @media (max-width: 780px) {
+            .card {
+                padding: 1.2rem;
+            }
+            .stat-value {
+                font-size: 1.2rem;
+            }
+            .last-roll span {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>🎲 Würfeln – Relative Häufigkeit der Augenzahl 6</h1>
+    <div class="sub">📊 Liniendiagramm: Annäherung an die theoretische Wahrscheinlichkeit p = 1/6 ≈ 0.1667</div>
+
+    <div class="dashboard">
+        <div class="control-panel">
+            <button class="wuerfel-btn" id="wuerfelBtn">🎲 Würfeln 🎲</button>
+            <button class="wuerfel-btn reset-btn" id="resetBtn">🔄 Neustart / Zurücksetzen</button>
+            <div class="last-roll">
+                🎯 Letzter Wurf: <span id="lastRoll">—</span>
+            </div>
+            <div style="font-size: 0.8rem; text-align: center; margin-top: 0.5rem;">
+                ⚡ Klick auf Würfeln – die relative Häufigkeit der 6 wird im Diagramm aktualisiert.
+            </div>
+        </div>
+        <div class="stats-panel">
+            <div class="stat-label">✔️ Absolute Häufigkeit der 6</div>
+            <div class="stat-value" id="absoluteHäufigkeit">0</div>
+            <div class="stat-label" style="margin-top: 1rem;">📈 Relative Häufigkeit der 6 (aktuell)</div>
+            <div class="stat-value" id="relativeHäufigkeit">0.0000</div>
+            <div class="stat-label" style="margin-top: 1rem;">🎲 Anzahl aller Würfe</div>
+            <div class="stat-value" id="totalWuerfe">0</div>
+            <hr>
+            <div class="stat-label">🎓 Theoretischer Wert (1/6)</div>
+            <div class="stat-value" style="color:#2563eb;">≈ 0.1667</div>
+        </div>
+    </div>
+
+    <div class="chart-container">
+        <canvas id="freqCanvas" width="800" height="450" style="width:100%; height:auto; max-width:1000px; aspect-ratio:800/450"></canvas>
+        <div class="legend">
+            <div class="legend-item"><div class="color-box" style="background:#f97316; height:3px; width:28px;"></div> Relative Häufigkeit (6)</div>
+            <div class="legend-item"><div class="color-dashed"></div> Theoretische Wahrscheinlichkeit 1/6</div>
+            <div class="legend-item"><div class="color-box" style="background:#475569; width:12px; height:12px; border-radius:10px;"></div> Messpunkte</div>
+        </div>
+    </div>
+    <footer>
+        📐 Gesetz der großen Zahlen: Je mehr Würfe, desto näher kommt die relative Häufigkeit der 6 an 1/6 (≈0,1667).<br>
+        👩‍🏫 Für den Mathematikunterricht – interaktiv und dynamisch.
+    </footer>
+</div>
+
+<script>
+    (function() {
+        // ----- Datenstruktur -----
+        let totalRolls = 0;       // Anzahl aller Würfe
+        let countSix = 0;         // absolute Häufigkeit der 6
+        let lastRollValue = null; // letzte gewürfelte Zahl
+        let history = [];         // Array von Objekten {rollNumber: totalRolls after roll, relFreq: relative Häufigkeit der 6}
+        // Nach jedem Wurf speichern wir einen Punkt für das Liniendiagramm:
+        // history[i] = { x: Anzahl Würfe (nach diesem Wurf), y: relative Häufigkeit der 6 nach diesem Wurf }
+
+        // ----- Canvas Elemente -----
+        const canvas = document.getElementById('freqCanvas');
+        const ctx = canvas.getContext('2d');
+        // Setze feste Canvas-Abmessungen (800x450) für konsistente Skalierung
+        canvas.width = 800;
+        canvas.height = 450;
+        
+        // Anzeige-Elemente
+        const absoluteSpan = document.getElementById('absoluteHäufigkeit');
+        const relativeSpan = document.getElementById('relativeHäufigkeit');
+        const totalSpan = document.getElementById('totalWuerfe');
+        const lastRollSpan = document.getElementById('lastRoll');
+        
+        // Buttons
+        const wuerfelBtn = document.getElementById('wuerfelBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        
+        // ---- Hilfsfunktionen für Achsen & Diagramm ----
+        // Koordinatensystem: x = Anzahl Würfe (0 bis maxX), y = relative Häufigkeit (0..1)
+        // maxX = aktuell totalRolls (oder mindestens 1, damit Achse sinnvoll)
+        // Bei totalRolls = 0 -> nur leere Achsen von 0 bis 1 (x max = 0)
+        
+        function getMaxX() {
+            // Maximale Anzahl Würfe für Skalierung (mindestens 1, sonst keine Punkte)
+            return Math.max(1, totalRolls);
+        }
+        
+        function toPixelX(xVal) {
+            // xVal = Anzahl Würfe (0 .. totalRolls)
+            const maxX = getMaxX();
+            const marginLeft = 55;
+            const marginRight = 30;
+            const plotWidth = canvas.width - marginLeft - marginRight;
+            // x=0 → marginLeft,  x=maxX → marginLeft+plotWidth
+            const t = xVal / maxX;
+            return marginLeft + t * plotWidth;
+        }
+        
+        function toPixelY(yVal) {
+            // yVal = relative Häufigkeit (0 bis 1)
+            const marginTop = 25;
+            const marginBottom = 45;
+            const plotHeight = canvas.height - marginTop - marginBottom;
+            // y=1 → marginTop, y=0 → canvas.height - marginBottom
+            const pixelY = marginTop + (1 - yVal) * plotHeight;
+            return pixelY;
+        }
+        
+        function drawAxesAndGrid() {
+            ctx.save();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = "#cbd5e6";
+            ctx.lineWidth = 0.7;
+            ctx.fillStyle = "#1e293b";
+            ctx.font = "12px 'Segoe UI', monospace";
+            ctx.textAlign = "center";
+            
+            const maxX = getMaxX();
+            const marginLeft = 55, marginRight = 30, marginTop = 25, marginBottom = 45;
+            const plotWidth = canvas.width - marginLeft - marginRight;
+            const plotHeight = canvas.height - marginTop - marginBottom;
+            
+            // Hintergrund weiß
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Gitterlinien y-Werte (0.0, 0.2, 0.4, 0.6, 0.8, 1.0)
+            for (let y = 0; y <= 1; y += 0.2) {
+                let yPix = toPixelY(y);
+                ctx.beginPath();
+                ctx.moveTo(marginLeft, yPix);
+                ctx.lineTo(canvas.width - marginRight, yPix);
+                ctx.strokeStyle = "#e0e7ef";
+                ctx.stroke();
+                ctx.fillStyle = "#334155";
+                ctx.fillText(y.toFixed(1), marginLeft - 8, yPix + 3);
+            }
+            
+            // Gitterlinien x-Achse (dynamisch je nach maxX)
+            // Maximal 10 Unterteilungen anzeigen
+            let steps = Math.min(10, maxX);
+            for (let i = 0; i <= steps; i++) {
+                let xVal = (maxX * i) / steps;
+                let xPix = toPixelX(xVal);
+                ctx.beginPath();
+                ctx.moveTo(xPix, marginTop);
+                ctx.lineTo(xPix, canvas.height - marginBottom);
+                ctx.strokeStyle = "#e0e7ef";
+                ctx.stroke();
+                ctx.fillStyle = "#1f2a44";
+                ctx.fillText(Math.round(xVal), xPix, canvas.height - marginBottom + 18);
+            }
+            
+            // Achsen zeichnen (dicker)
+            ctx.beginPath();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = "#2c3e50";
+            // X-Achse
+            const yZeroPix = toPixelY(0);
+            ctx.moveTo(marginLeft, yZeroPix);
+            ctx.lineTo(canvas.width - marginRight, yZeroPix);
+            // Y-Achse
+            ctx.moveTo(marginLeft, marginTop);
+            ctx.lineTo(marginLeft, canvas.height - marginBottom);
+            ctx.stroke();
+            
+            // Achsenbeschriftungen
+            ctx.fillStyle = "#0f172a";
+            ctx.font = "bold 13px system-ui";
+            ctx.fillText("Anzahl Würfe (n)", canvas.width/2, canvas.height - 10);
+            ctx.save();
+            ctx.translate(28, canvas.height/2);
+            ctx.rotate(-Math.PI/2);
+            ctx.fillText("Relative Häufigkeit der 6", 0, 0);
+            ctx.restore();
+            
+            // Titelzeile
+            ctx.font = "bold 12px system-ui";
+            ctx.fillStyle = "#1e40af";
+            ctx.fillText("Annäherung an 1/6 (≈0,1667)", canvas.width-150, 22);
+            ctx.restore();
+        }
+        
+        // Zeichne die theoretische Linie y = 1/6
+        function drawTheoreticalLine() {
+            ctx.save();
+            ctx.beginPath();
+            const yTheo = 1/6;
+            const yPix = toPixelY(yTheo);
+            const marginLeft = 55, marginRight = 30;
+            ctx.moveTo(marginLeft, yPix);
+            ctx.lineTo(canvas.width - marginRight, yPix);
+            ctx.strokeStyle = "#2563eb";
+            ctx.lineWidth = 2.5;
+            ctx.setLineDash([8, 8]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            // Punktbeschriftung
+            ctx.fillStyle = "#1e40af";
+            ctx.font = "10px monospace";
+            ctx.fillText("p = 1/6", canvas.width - marginRight - 45, yPix - 4);
+            ctx.restore();
+        }
+        
+        // Zeichne den Linienzug der relativen Häufigkeit aus history
+        function drawRelFreqLine() {
+            if (history.length === 0) return;
+            ctx.save();
+            ctx.beginPath();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = "#f97316";
+            ctx.setLineDash([]);
+            let first = true;
+            for (let i = 0; i < history.length; i++) {
+                const point = history[i];
+                const xCoord = toPixelX(point.x);
+                const yCoord = toPixelY(point.y);
+                if (first) {
+                    ctx.moveTo(xCoord, yCoord);
+                    first = false;
+                } else {
+                    ctx.lineTo(xCoord, yCoord);
+                }
+            }
+            ctx.stroke();
+            
+            // Zusätzlich Punkte markieren (kleine Kreise)
+            for (let i = 0; i < history.length; i++) {
+                const point = history[i];
+                const xCoord = toPixelX(point.x);
+                const yCoord = toPixelY(point.y);
+                ctx.beginPath();
+                ctx.fillStyle = "#475569";
+                ctx.arc(xCoord, yCoord, 4, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.fillStyle = "white";
+                ctx.beginPath();
+                ctx.arc(xCoord, yCoord, 1.8, 0, 2*Math.PI);
+                ctx.fill();
+            }
+            ctx.restore();
+        }
+        
+        // Haupt-Renderfunktion: Zeichne alles
+        function renderChart() {
+            drawAxesAndGrid();
+            drawTheoreticalLine();
+            if (totalRolls > 0) {
+                drawRelFreqLine();
+            }
+            // ggf. zusätzlich Startpunkt bei (0,?) nicht nötig -> sinnvoller
+            if (totalRolls === 0 && history.length===0) {
+                // leeres Diagramm mit Achsen
+            }
+        }
+        
+        // ----- Logik: Würfeln & Statistik aktualisieren -----
+        function rollDice() {
+            // Zufallszahl 1 bis 6
+            const roll = Math.floor(Math.random() * 6) + 1;
+            lastRollValue = roll;
+            totalRolls++;
+            if (roll === 6) {
+                countSix++;
+            }
+            // Relative Häufigkeit (auf 6 Dezimalstellen genau)
+            let relFreq = (totalRolls === 0) ? 0 : countSix / totalRolls;
+            // Speichere Punkt im Verlauf (x = totalRolls, y = relFreq)
+            history.push({
+                x: totalRolls,
+                y: relFreq
+            });
+            
+            // UI aktualisieren
+            absoluteSpan.innerText = countSix;
+            relativeSpan.innerText = relFreq.toFixed(6);
+            totalSpan.innerText = totalRolls;
+            lastRollSpan.innerText = roll;
+            
+            // Diagramm neu zeichnen
+            renderChart();
+        }
+        
+        // Reset: alles zurücksetzen
+        function resetExperiment() {
+            totalRolls = 0;
+            countSix = 0;
+            lastRollValue = null;
+            history = [];
+            // UI zurücksetzen
+            absoluteSpan.innerText = "0";
+            relativeSpan.innerText = "0.000000";
+            totalSpan.innerText = "0";
+            lastRollSpan.innerText = "—";
+            // Diagramm leeren (nur Achsen / Theoretische Linie)
+            renderChart();
+        }
+        
+        // Event-Listener
+        wuerfelBtn.addEventListener('click', () => {
+            rollDice();
+        });
+        
+        resetBtn.addEventListener('click', () => {
+            resetExperiment();
+        });
+        
+        // Initialer Zustand: keine Würfe, Diagramm zeichnen (leere Achsen mit theoretischer Linie)
+        resetExperiment();  // sorgt für initiales Rendering
+        
+        // Achtung: Bei Fenster- oder Größenänderung bleibt Canvas unverändert, kein Zoom nötig.
+        // Option: extra Resize-Handler, der das Diagramm neu zeichnet (weil CSS skalieren kann)
+        window.addEventListener('resize', () => {
+            renderChart();
+        });
+        
+        // Erläuterung: Die x-Achse skaliert dynamisch mit der Anzahl der Würfe. So sieht man,
+        // wie sich die relative Häufigkeit mit wachsendem n dem Wert 1/6 annähert.
+        // Der Benutzer kann beliebig oft würfeln – das Liniendiagramm wächst.
+    })();
+</script>
+</body>
+</html>

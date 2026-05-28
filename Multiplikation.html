@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Multiplikation bis 20 x 20</title>
+    <style>
+        /* Farbenfroher, kindgerechter Hintergrund, der 100% offline funktioniert */
+        body {
+            font-family: 'Comic Sans MS', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #e0f7fa;
+            /* Ein verspieltes Punktemuster als Hintergrund */
+            background-image: radial-gradient(#b2ebf2 20%, transparent 20%), radial-gradient(#80deea 20%, transparent 20%);
+            background-color: #e0f7fa;
+            background-position: 0 0, 25px 25px;
+            background-size: 50px 50px;
+            color: #333;
+        }
+
+        .app-container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+            border: 4px solid #4dd0e1;
+        }
+
+        h1 {
+            color: #00838f;
+            margin-top: 0;
+            font-size: 28px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 3px dashed #b2ebf2;
+            padding-bottom: 10px;
+        }
+
+        .instruction {
+            background: #fff9c4;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 16px;
+            color: #555;
+            margin-bottom: 20px;
+            border-left: 5px solid #fbc02d;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        /* Top-Bar mit Reset und Statistik */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding: 10px 20px;
+            background: #f1f8e9;
+            border-radius: 10px;
+            border: 2px solid #c5e1a5;
+        }
+
+        .stats {
+            font-size: 18px;
+            font-weight: bold;
+            color: #33691e;
+            text-align: right;
+        }
+
+        .stats span {
+            display: block;
+            margin: 5px 0;
+        }
+
+        /* Der zentrale Aufgaben-Bereich */
+        .game-area {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+            border: 2px solid #eeeeee;
+        }
+
+        .equation-box {
+            font-size: 40px;
+            font-weight: bold;
+            color: #1565c0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        input[type="number"] {
+            font-size: 36px;
+            font-weight: bold;
+            color: #d32f2f;
+            width: 100px;
+            text-align: center;
+            border: 3px solid #90caf9;
+            border-radius: 10px;
+            padding: 5px;
+            outline: none;
+            background: #e3f2fd;
+            transition: border-color 0.3s;
+            font-family: inherit;
+        }
+
+        input[type="number"]:focus {
+            border-color: #1976d2;
+        }
+
+        /* Buttons */
+        button {
+            font-family: inherit;
+            padding: 12px 24px;
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: transform 0.1s, background-color 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin: 5px;
+        }
+
+        button:active:not(:disabled) {
+            transform: scale(0.95);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        button:disabled {
+            background-color: #cfd8dc !important;
+            cursor: not-allowed;
+            box-shadow: none;
+            color: #90a4ae;
+        }
+
+        .btn-reset { background-color: #78909c; }
+        .btn-reset:hover:not(:disabled) { background-color: #546e7a; }
+
+        .btn-new { background-color: #ab47bc; font-size: 22px; padding: 15px 30px; width: 100%; margin-bottom: 20px;}
+        .btn-new:hover:not(:disabled) { background-color: #8e24aa; }
+
+        .btn-check { background-color: #43a047; font-size: 22px; padding: 15px 30px; width: 100%; }
+        .btn-check:hover:not(:disabled) { background-color: #2e7d32; }
+
+        /* Feedback Bereich */
+        #feedback-area {
+            margin-top: 25px;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            0% { opacity: 0; transform: scale(0.5); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        .feedback-text {
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .text-correct { color: #2e7d32; }
+        .text-wrong { color: #c62828; }
+
+        svg {
+            width: 100px;
+            height: 100px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <h1>Multiplikation bis 20 x 20</h1>
+        
+        <div class="instruction">
+            In diesem Beispiel sollen zwei zufällige Zahlen multipliziert werden.<br>
+            Das Ergebnis muss dabei in das Feld eingetragen und dann geprüft werden.
+        </div>
+
+        <div class="top-bar">
+            <button id="btn-reset" class="btn-reset">Reset</button>
+            <div class="stats">
+                Runde: <span id="val-round">1</span>
+                Punkte: <span id="val-score">0</span>
+            </div>
+        </div>
+
+        <div class="game-area">
+            <button id="btn-new" class="btn-new" disabled>Neue Aufgabe</button>
+            
+            <div class="equation-box">
+                <span id="num1">?</span> &middot; <span id="num2">?</span> = 
+                <input type="number" id="answer-input" placeholder="...">
+            </div>
+            
+            <button id="btn-check" class="btn-check">Ergebnis prüfen</button>
+
+            <div id="feedback-area">
+                <div id="icon-correct" style="display:none;">
+                    <svg viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="45" fill="#FFD54F" />
+                        <circle cx="35" cy="40" r="6" fill="#333" />
+                        <circle cx="65" cy="40" r="6" fill="#333" />
+                        <path d="M 25 55 Q 50 85 75 55" stroke="#333" stroke-width="6" fill="none" stroke-linecap="round" />
+                    </svg>
+                </div>
+                
+                <div id="icon-wrong" style="display:none;">
+                    <svg viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="45" fill="#e57373" />
+                        <circle cx="35" cy="40" r="6" fill="#333" />
+                        <circle cx="65" cy="40" r="6" fill="#333" />
+                        <path d="M 30 70 Q 50 50 70 70" stroke="#333" stroke-width="6" fill="none" stroke-linecap="round" />
+                        <path d="M 35 50 Q 38 55 35 60 Q 32 55 35 50" fill="#2196F3" />
+                    </svg>
+                </div>
+
+                <div id="feedback-text" class="feedback-text"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variablen für den Spielstand
+        let currentNum1 = 0;
+        let currentNum2 = 0;
+        let round = 1;
+        let score = 0;
+        let isAnswered = false;
+
+        // HTML-Elemente abgreifen
+        const elNum1 = document.getElementById('num1');
+        const elNum2 = document.getElementById('num2');
+        const elInput = document.getElementById('answer-input');
+        
+        const valRound = document.getElementById('val-round');
+        const valScore = document.getElementById('val-score');
+        
+        const btnCheck = document.getElementById('btn-check');
+        const btnNew = document.getElementById('btn-new');
+        const btnReset = document.getElementById('btn-reset');
+        
+        const feedbackArea = document.getElementById('feedback-area');
+        const feedbackText = document.getElementById('feedback-text');
+        const iconCorrect = document.getElementById('icon-correct');
+        const iconWrong = document.getElementById('icon-wrong');
+
+        // Funktion: Zufallszahl zwischen 0 und 20 generieren
+        function getRandomInt() {
+            return Math.floor(Math.random() * 21); // 0 bis 20
+        }
+
+        // Funktion: Eine neue Aufgabe starten
+        function startNewTask() {
+            currentNum1 = getRandomInt();
+            currentNum2 = getRandomInt();
+            
+            elNum1.innerText = currentNum1;
+            elNum2.innerText = currentNum2;
+            
+            elInput.value = '';
+            elInput.disabled = false;
+            elInput.focus();
+            
+            isAnswered = false;
+            
+            // UI zurücksetzen
+            feedbackArea.style.display = 'none';
+            iconCorrect.style.display = 'none';
+            iconWrong.style.display = 'none';
+            
+            btnCheck.disabled = false;
+            btnNew.disabled = true;
+            
+            valRound.innerText = round;
+            valScore.innerText = score;
+        }
+
+        // Funktion: Ergebnis überprüfen
+        function checkResult() {
+            if (isAnswered || elInput.value.trim() === '') return;
+            
+            const userAnswer = parseInt(elInput.value, 10);
+            const correctAnswer = currentNum1 * currentNum2;
+            
+            isAnswered = true;
+            elInput.disabled = true;
+            btnCheck.disabled = true;
+            btnNew.disabled = false;
+            
+            feedbackArea.style.display = 'flex';
+            
+            if (userAnswer === correctAnswer) {
+                // Richtig
+                score++;
+                valScore.innerText = score;
+                iconCorrect.style.display = 'block';
+                feedbackText.innerText = "Richtig! Super gemacht!";
+                feedbackText.className = "feedback-text text-correct";
+            } else {
+                // Falsch
+                iconWrong.style.display = 'block';
+                feedbackText.innerHTML = `Leider falsch!<br>Das richtige Ergebnis ist: ${correctAnswer}`;
+                feedbackText.className = "feedback-text text-wrong";
+            }
+        }
+
+        // Event-Listener für die Buttons
+        btnCheck.addEventListener('click', checkResult);
+        
+        btnNew.addEventListener('click', () => {
+            round++;
+            startNewTask();
+        });
+        
+        btnReset.addEventListener('click', () => {
+            round = 1;
+            score = 0;
+            startNewTask();
+        });
+
+        // Erlaubt das Prüfen durch Drücken der Enter-Taste
+        elInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                checkResult();
+            }
+        });
+
+        // Spiel beim Laden der Seite direkt starten
+        window.onload = startNewTask;
+
+    </script>
+</body>
+</html>

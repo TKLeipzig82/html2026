@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Herleitung des Volumens eines Prismas</title>
+    <style>
+        /* --- CSS (Design & Responsivität) --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background-color: #e0e0e0;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            display: flex;
+            width: 100%;
+            max-width: 1100px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+            flex-direction: row; 
+            border: 1px solid #ccc;
+        }
+
+        @media (max-width: 800px) {
+            .container { flex-direction: column; }
+        }
+
+        /* Geometrie-Ansicht (links) */
+        .geometry-view {
+            flex: 1.5;
+            position: relative;
+            background-color: #ffffff; 
+            border-right: 1px solid #ccc;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 450px;
+        }
+
+        @media (max-width: 800px) {
+            .geometry-view { border-right: none; border-bottom: 1px solid #ccc; }
+        }
+
+        canvas {
+            width: 100%;
+            height: auto;
+            max-width: 800px;
+            touch-action: none; 
+            cursor: move;
+            border: 1px solid #eee;
+        }
+
+        .hint-text {
+            position: absolute;
+            bottom: 15px;
+            font-size: 0.9em;
+            color: #7f8c8d;
+            pointer-events: none;
+            background: rgba(255,255,255,0.8);
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+
+        /* Steuerpult (rechts) */
+        .control-panel {
+            flex: 1;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            background-color: #e8e8e8;
+        }
+
+        h1 {
+            color: #c0392b;
+            font-size: 1.8em;
+            margin-bottom: 5px;
+            line-height: 1.2;
+            font-weight: normal;
+        }
+
+        .task-description {
+            font-size: 1.05em;
+            color: #333;
+            margin-bottom: 10px;
+            line-height: 1.4;
+            font-weight: bold;
+        }
+
+        .slider-group {
+            background: white;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: white;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .data-box {
+            background-color: #e8f8f5;
+            border-left: 4px solid #27ae60;
+            padding: 10px 15px;
+            margin-top: 5px;
+            font-size: 1em;
+            line-height: 1.5;
+            display: none; 
+        }
+
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        
+        /* Spezielle Klasse für die Darstellung des Bruchs */
+        .fraction {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            vertical-align: middle;
+            margin: 0 4px;
+            font-size: 0.9em;
+        }
+        
+        .fraction .numerator {
+            border-bottom: 1.5px solid #333;
+            padding: 0 2px;
+            line-height: 1.1;
+        }
+        
+        .fraction .denominator {
+            padding: 0 2px;
+            line-height: 1.1;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="geometry-view">
+        <canvas id="canvas3d" width="800" height="600">
+            Dein Browser unterstützt das Canvas-Element nicht.
+        </canvas>
+        <div class="hint-text">Bewege die Maus/den Finger auf dem Bild, um die Ansicht zu drehen 🔄</div>
+    </div>
+
+    <div class="control-panel">
+        <h1>Herleitung des Volumens eines Prismas</h1>
+        <p class="task-description">
+            Vergleiche den Quader (links) und das Dreiecksprisma (rechts). Verändere die Höhe und entdecke den Zusammenhang zwischen Grundfläche und Volumen.
+        </p>
+
+        <div class="slider-group">
+            <div class="slider-label">
+                <span>Höhe einstellen (h):</span>
+                <span id="heightValue">5.0 cm</span>
+            </div>
+            <input type="range" id="heightSlider" min="0" max="10" step="0.1" value="5">
+        </div>
+
+        <div class="checkbox-group">
+            <label class="checkbox-label">
+                <input type="checkbox" id="checkBase">
+                1. Grundfläche einblenden
+            </label>
+            <div id="dataBase" class="data-box">
+                <div class="data-row">
+                    <span>Quader (G = 3 cm &middot; 4 cm):</span>
+                    <span>G = 12 cm²</span>
+                </div>
+                <div class="data-row">
+                    <span style="display: flex; align-items: center;">
+                        Prisma (G =  
+                        <span class="fraction">
+                            <span class="numerator">1</span>
+                            <span class="denominator">2</span>
+                        </span>
+                        &middot; 6 cm &middot; 4 cm):
+                    </span>
+                    <span>G = 12 cm²</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="checkbox-group">
+            <label class="checkbox-label">
+                <input type="checkbox" id="checkVol">
+                2. Volumenwerte vergleichen
+            </label>
+            <div id="dataVol" class="data-box" style="background-color: #ebf5fb; border-left-color: #2980b9;">
+                <div class="data-row">
+                    <span>Quader:</span>
+                    <span id="volQuader">V = 60.0 cm³</span>
+                </div>
+                <div class="data-row">
+                    <span>Prisma:</span>
+                    <span id="volPrisma">V = 60.0 cm³</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="checkbox-group">
+            <label class="checkbox-label">
+                <input type="checkbox" id="checkFormula">
+                3. Volumenformel ableiten
+            </label>
+            <div id="dataFormula" class="data-box" style="background-color: #fef9e7; border-left-color: #f39c12;">
+                <div class="data-row" style="font-weight: bold; border-bottom: 1px solid #ccc; padding-bottom: 5px;">
+                    <span>Berechnung für beide:</span>
+                    <span>V = G &middot; h</span>
+                </div>
+                <div class="data-row" style="color: #d35400; padding-top: 5px; margin-top: 5px; font-weight: bold;">
+                    <span></span>
+                    <span style="text-align: center;">Gleiche Grundfläche & gleiche Höhe = Gleiches Volumen!</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    var canvas = document.getElementById('canvas3d');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+
+    // Schutzpanzer
+    try {
+        var slider = document.getElementById('heightSlider');
+        var heightValText = document.getElementById('heightValue');
+        var checkBase = document.getElementById('checkBase');
+        var checkVol = document.getElementById('checkVol');
+        var checkFormula = document.getElementById('checkFormula');
+        var dataBase = document.getElementById('dataBase');
+        var dataVol = document.getElementById('dataVol');
+        var dataFormula = document.getElementById('dataFormula');
+        var volQuaderText = document.getElementById('volQuader');
+        var volPrismaText = document.getElementById('volPrisma');
+
+        var angleX = 0.4;  
+        var angleY = -0.5; 
+        var isDragging = false;
+        var lastMouseX = 0;
+        var lastMouseY = 0;
+
+        var scale = 25; 
+        var focalLength = 800; 
+        
+        function rotate3D(x, y, z) {
+            var x1 = x * Math.cos(angleY) - z * Math.sin(angleY);
+            var z1 = x * Math.sin(angleY) + z * Math.cos(angleY);
+            var y2 = y * Math.cos(angleX) - z1 * Math.sin(angleX);
+            var z2 = y * Math.sin(angleX) + z1 * Math.cos(angleX);
+            return { x: x1, y: y2, z: z2 };
+        }
+
+        function project(p) {
+            var zRatio = focalLength / (focalLength + p.z * scale);
+            return {
+                x: p.x * scale * zRatio + canvas.width / 2,
+                y: p.y * scale * zRatio + canvas.height / 2 + 50,
+                scale: zRatio
+            };
+        }
+
+        function render() {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            var h = parseFloat(slider.value);
+            var showBase = checkBase.checked;
+
+            heightValText.innerText = h.toFixed(1) + " cm";
+            volQuaderText.innerText = "V = " + (12 * h).toFixed(1) + " cm³";
+            volPrismaText.innerText = "V = " + (12 * h).toFixed(1) + " cm³";
+            
+            dataBase.style.display = showBase ? 'block' : 'none';
+            dataVol.style.display = checkVol.checked ? 'block' : 'none';
+            dataFormula.style.display = checkFormula.checked ? 'block' : 'none';
+
+            var faces = [];
+
+            // Quader
+            var qX = -4.5;
+            var qPoints = [
+                {x: qX - 2, y: 0, z: -1.5}, 
+                {x: qX + 2, y: 0, z: -1.5}, 
+                {x: qX + 2, y: 0, z:  1.5}, 
+                {x: qX - 2, y: 0, z:  1.5}, 
+                {x: qX - 2, y: -h, z: -1.5},
+                {x: qX + 2, y: -h, z: -1.5},
+                {x: qX + 2, y: -h, z:  1.5},
+                {x: qX - 2, y: -h, z:  1.5} 
+            ];
+
+            // Prisma
+            var pX = 4.5;
+            var pPoints = [
+                {x: pX - 3, y: 0, z: -2}, 
+                {x: pX + 3, y: 0, z: -2}, 
+                {x: pX,     y: 0, z:  2}, 
+                {x: pX - 3, y: -h, z: -2}, 
+                {x: pX + 3, y: -h, z: -2}, 
+                {x: pX,     y: -h, z:  2}  
+            ];
+
+            function addFaces(points, indices, colorFill, colorStroke, isBaseFace) {
+                for (var i = 0; i < indices.length; i++) {
+                    var idxArray = indices[i];
+                    var rotatedPoints = [];
+                    var sumZ = 0;
+                    for (var j = 0; j < idxArray.length; j++) {
+                        var pt = points[idxArray[j]];
+                        var rotPt = rotate3D(pt.x, pt.y, pt.z);
+                        rotatedPoints.push(rotPt);
+                        sumZ += rotPt.z;
+                    }
+                    var avgZ = sumZ / rotatedPoints.length;
+                    faces.push({
+                        points: rotatedPoints,
+                        avgZ: avgZ,
+                        fill: colorFill,
+                        stroke: colorStroke,
+                        isBase: isBaseFace
+                    });
+                }
+            }
+
+            var wallColor = 'rgba(41, 128, 185, 0.15)'; 
+            var strokeColor = '#34495e'; 
+            var qBaseColor = showBase ? 'rgba(39, 174, 96, 0.8)' : wallColor;
+            var pBaseColor = showBase ? 'rgba(39, 174, 96, 0.8)' : wallColor;
+
+            // Quader
+            addFaces(qPoints, [[4,5,6,7], [0,1,5,4], [1,2,6,5], [2,3,7,6], [3,0,4,7]], wallColor, strokeColor, false);
+            addFaces(qPoints, [[0,1,2,3]], qBaseColor, showBase ? '#1e8449' : strokeColor, showBase);
+
+            // Prisma
+            addFaces(pPoints, [[3,4,5], [0,1,4,3], [1,2,5,4], [2,0,3,5]], wallColor, strokeColor, false);
+            addFaces(pPoints, [[0,1,2]], pBaseColor, showBase ? '#1e8449' : strokeColor, showBase);
+
+            // Sortieren (Painter's Algorithm)
+            faces.sort(function(a, b) { return b.avgZ - a.avgZ; });
+
+            // Zeichnen
+            for (var k = 0; k < faces.length; k++) {
+                var face = faces[k];
+                ctx.beginPath();
+                var proj0 = project(face.points[0]);
+                ctx.moveTo(proj0.x, proj0.y);
+                for(var m = 1; m < face.points.length; m++) {
+                    var p = project(face.points[m]);
+                    ctx.lineTo(p.x, p.y);
+                }
+                ctx.closePath();
+                ctx.fillStyle = face.fill;
+                ctx.fill();
+                ctx.lineWidth = face.isBase ? 2 : 1;
+                ctx.strokeStyle = face.stroke;
+                ctx.stroke();
+            }
+
+            // Beschriftung
+            ctx.font = '16px Arial';
+            ctx.fillStyle = '#c0392b';
+            ctx.textAlign = 'center';
+
+            function drawLabel(x, y, z, text, xOff, yOff) {
+                var offX = xOff ? xOff : 0;
+                var offY = yOff ? yOff : 0;
+                var p = project(rotate3D(x, y, z));
+                ctx.fillText(text, p.x + offX, p.y + offY);
+            }
+
+            drawLabel(qX, 0, 1.5, "4", 0, 20); 
+            drawLabel(qX + 2, 0, 0, "3", 15, 10); 
+            if(h > 0) drawLabel(qX - 2, -h/2, 1.5, "h", -15, 0); 
+
+            drawLabel(pX, 0, -2, "6", 0, -10); 
+            
+            var hStart = rotate3D(pX, 0, -2);
+            var hEnd = rotate3D(pX, 0, 2);
+            var pStart = project(hStart);
+            var pEnd = project(hEnd);
+            
+            ctx.beginPath();
+            ctx.setLineDash([5, 5]); 
+            ctx.moveTo(pStart.x, pStart.y);
+            ctx.lineTo(pEnd.x, pEnd.y);
+            ctx.strokeStyle = '#c0392b';
+            ctx.stroke();
+            ctx.setLineDash([]); 
+            
+            drawLabel(pX, 0, 0, "4", -15, 5); 
+            if(h > 0) drawLabel(pX + 3, -h/2, -2, "h", 15, 0); 
+        }
+
+        // Steuerung
+        function startDrag(e) {
+            isDragging = true;
+            var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            lastMouseX = clientX;
+            lastMouseY = clientY;
+        }
+
+        function drag(e) {
+            if (!isDragging) return;
+            e.preventDefault(); 
+            var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            
+            var deltaX = clientX - lastMouseX;
+            var deltaY = clientY - lastMouseY;
+            
+            angleY += deltaX * 0.01;
+            angleX += deltaY * 0.01;
+            
+            if (angleX < -Math.PI/2) angleX = -Math.PI/2;
+            if (angleX > Math.PI/2) angleX = Math.PI/2;
+
+            lastMouseX = clientX;
+            lastMouseY = clientY;
+            render();
+        }
+
+        function stopDrag() {
+            isDragging = false;
+        }
+
+        canvas.addEventListener('mousedown', startDrag);
+        window.addEventListener('mousemove', drag);
+        window.addEventListener('mouseup', stopDrag);
+        canvas.addEventListener('mouseleave', stopDrag);
+        canvas.addEventListener('touchstart', startDrag, {passive: false});
+        window.addEventListener('touchmove', drag, {passive: false});
+        window.addEventListener('touchend', stopDrag);
+
+        slider.addEventListener('input', render);
+        checkBase.addEventListener('change', render);
+        checkVol.addEventListener('change', render);
+        checkFormula.addEventListener('change', render);
+
+        render();
+
+    } catch (error) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#ff0000';
+        ctx.font = 'bold 20px Arial';
+        ctx.fillText("Es gab einen Programmfehler:", 20, 50);
+        ctx.font = '16px Arial';
+        ctx.fillText(error.message, 20, 80);
+    }
+});
+</script>
+
+</body>
+</html>

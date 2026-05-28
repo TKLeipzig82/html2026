@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Satz des Thales - Interaktive Lernumgebung</title>
+    <style>
+        /* --- CSS (Design & Layout) --- */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background-color: #e0e0e0;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            width: 100%;
+            max-width: 1200px;
+            background-color: white;
+            border: 1px solid #ccc;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            flex-direction: row; 
+        }
+        @media (max-width: 900px) { .container { flex-direction: column; } }
+        
+        .geometry-view {
+            flex: 1.3;
+            background-color: #ffffff;
+            border-right: 1px solid #ccc;
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 400px;
+        }
+        @media (max-width: 900px) { .geometry-view { border-right: none; border-bottom: 1px solid #ccc; } }
+        
+        canvas {
+            width: 100%;
+            height: auto;
+            max-width: 800px;
+            touch-action: none; 
+            cursor: pointer;
+            border: 1px solid #eee;
+        }
+        
+        .control-panel {
+            flex: 1;
+            padding: 30px;
+            background-color: #e8e8e8;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        h1 { color: #ff0000; font-size: 2.5em; margin-bottom: 5px; font-weight: normal; }
+        h2 { color: #ff0000; font-size: 1.5em; margin-top: 10px; margin-bottom: 5px; font-weight: normal; }
+        .task-description { font-weight: bold; font-size: 1.1em; line-height: 1.5; }
+        
+        .checkbox-group { display: flex; flex-direction: column; gap: 15px; }
+        .checkbox-row { display: flex; align-items: flex-start; gap: 15px; }
+        .checkbox-label { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 1.1em; white-space: nowrap; }
+        input[type="checkbox"] { width: 22px; height: 22px; cursor: pointer; }
+        
+        .theorem-block { font-weight: bold; font-size: 1.1em; font-style: italic; line-height: 1.4; padding-top: 2px; }
+        
+        /* Box für die Winkel-Werte (Tipp 3) */
+        .angle-values-box {
+            background-color: white;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 5px;
+            font-size: 1.1em;
+            line-height: 1.6;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .angle-values-box .control-line {
+            border-top: 2px solid #ddd;
+            margin-top: 8px;
+            padding-top: 8px;
+            font-weight: bold;
+            color: #006400;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="geometry-view">
+        <canvas id="geometryCanvas" width="800" height="800">
+            Dein Browser unterstützt das Canvas-Element nicht.
+        </canvas>
+    </div>
+
+    <div class="control-panel">
+        <h1>Der Satz des Thales</h1>
+        <div class="task-description">
+            Bewege den Punkt C auf dem Kreisbogen.<br>
+            Welche Besonderheit im Dreieck ABC stellst du fest?
+        </div>
+        
+        <div class="checkbox-group">
+            <label class="checkbox-label">
+                <input type="checkbox" id="checkVermutung">
+                Tipp zur Vermutung
+            </label>
+            <div class="checkbox-row">
+                <label class="checkbox-label" style="min-width: 140px;">
+                    <input type="checkbox" id="checkSatz">
+                    Satz anzeigen
+                </label>
+                <div id="theoremBlock" class="theorem-block" style="display: none;">
+                    Jeder Peripheriewinkel über einem<br>Kreis-Durchmesser beträgt 90°.
+                </div>
+            </div>
+        </div>
+
+        <h2>Ideen zum Beweisen</h2>
+        <div class="checkbox-group">
+            <label class="checkbox-label"><input type="checkbox" id="checkTipp1"> Tipp 1</label>
+            <label class="checkbox-label"><input type="checkbox" id="checkTipp2"> Tipp 2</label>
+            
+            <div style="display: flex; flex-direction: column;">
+                <label class="checkbox-label"><input type="checkbox" id="checkTipp3"> Tipp 3</label>
+                
+                <div id="angleValuesBlock" class="angle-values-box" style="display: none;">
+                    <div>Winkel α = <span id="valAlpha"></span>°</div>
+                    <div>Winkel β = <span id="valBeta"></span>°</div>
+                    <div>Winkel γ₁ = <span id="valGamma1"></span>°</div>
+                    <div>Winkel γ₂ = <span id="valGamma2"></span>°</div>
+                    <div class="control-line">Kontrolle γ₁ + γ₂ = 90°</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    var canvas = document.getElementById('geometryCanvas');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+
+    try {
+        var centerX = 400;
+        var centerY = 400;
+        var radiusCircle = 300;
+        var angleC_rad = Math.PI / 3; 
+        var isDraggingC = false;
+
+        // Alle Startwerte auf false
+        var state = { vermutung: false, satz: false, t1: false, t2: false, t3: false };
+
+        function drawScene() {
+            // Hintergrund weiß malen
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            var C = { x: centerX + radiusCircle * Math.cos(angleC_rad), y: centerY - radiusCircle * Math.sin(angleC_rad) };
+            var A = { x: centerX - radiusCircle, y: centerY };
+            var B = { x: centerX + radiusCircle, y: centerY };
+            var M = { x: centerX, y: centerY };
+
+            var alphaDeg = (angleC_rad * 180 / Math.PI) / 2;
+            var betaDeg = 90 - alphaDeg;
+
+            // HTML Werte im rechten Panel (Tipp 3) live aktualisieren
+            document.getElementById('valAlpha').innerText = alphaDeg.toFixed(0);
+            document.getElementById('valBeta').innerText = betaDeg.toFixed(0);
+            document.getElementById('valGamma1').innerText = alphaDeg.toFixed(0);
+            document.getElementById('valGamma2').innerText = betaDeg.toFixed(0);
+
+            // 1. Thales-Kreis
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radiusCircle, 0, 2 * Math.PI);
+            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = '#000000';
+            ctx.stroke();
+
+            // 2. Dreieck ABC
+            ctx.beginPath();
+            ctx.moveTo(A.x, A.y);
+            ctx.lineTo(B.x, B.y);
+            ctx.lineTo(C.x, C.y);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(210, 180, 140, 0.3)';
+            ctx.fill();
+
+            // 3. Winkel einzeichnen
+            if (state.vermutung) {
+                // Schablone für Dreieck
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.lineTo(C.x, C.y); ctx.closePath();
+                ctx.clip(); 
+
+                ctx.beginPath(); ctx.arc(A.x, A.y, 60, 0, 2 * Math.PI);
+                ctx.fillStyle = 'rgba(39, 174, 96, 0.3)'; ctx.fill();
+                ctx.strokeStyle = '#27ae60'; ctx.lineWidth = 1; ctx.stroke();
+
+                ctx.beginPath(); ctx.arc(B.x, B.y, 60, 0, 2 * Math.PI);
+                ctx.fillStyle = 'rgba(39, 174, 96, 0.3)'; ctx.fill();
+                ctx.strokeStyle = '#27ae60'; ctx.lineWidth = 1; ctx.stroke();
+
+                // 90° Winkel bei C (mit Punkt), wenn Tipp 3 noch aus ist
+                if (!state.t3) {
+                    ctx.beginPath(); ctx.arc(C.x, C.y, 50, 0, 2 * Math.PI);
+                    ctx.fillStyle = 'rgba(39, 174, 96, 0.3)'; ctx.fill();
+                    ctx.strokeStyle = '#27ae60'; ctx.lineWidth = 1; ctx.stroke();
+                    
+                    // Punkt im rechten Winkel
+                    ctx.beginPath(); ctx.arc(C.x, C.y + 25, 3, 0, 2 * Math.PI);
+                    ctx.fillStyle = '#27ae60'; ctx.fill();
+                }
+                ctx.restore(); 
+
+                // Beschriftung α und β
+                ctx.fillStyle = '#006400';
+                ctx.font = 'bold 20px Arial';
+                ctx.fillText('α = ' + alphaDeg.toFixed(0) + '°', A.x + 80, A.y - 25);
+                ctx.fillText('β = ' + betaDeg.toFixed(0) + '°', B.x - 100, B.y - 25);
+            }
+
+            if (state.t3) {
+                // Gamma 1
+                ctx.save();
+                ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(M.x, M.y); ctx.lineTo(C.x, C.y); ctx.closePath();
+                ctx.clip();
+                ctx.beginPath(); ctx.arc(C.x, C.y, 50, 0, 2 * Math.PI);
+                ctx.fillStyle = 'rgba(39, 174, 96, 0.3)'; ctx.fill(); ctx.strokeStyle = '#27ae60'; ctx.lineWidth = 1; ctx.stroke();
+                ctx.restore();
+
+                // Gamma 2
+                ctx.save();
+                ctx.beginPath(); ctx.moveTo(M.x, M.y); ctx.lineTo(B.x, B.y); ctx.lineTo(C.x, C.y); ctx.closePath();
+                ctx.clip();
+                ctx.beginPath(); ctx.arc(C.x, C.y, 60, 0, 2 * Math.PI); 
+                ctx.fillStyle = 'rgba(39, 174, 96, 0.3)'; ctx.fill(); ctx.strokeStyle = '#27ae60'; ctx.lineWidth = 1; ctx.stroke();
+                ctx.restore();
+
+                // Beschriftung γ1 und γ2
+                ctx.fillStyle = '#006400';
+                ctx.font = 'bold 20px Arial';
+                ctx.fillText('γ₁ = ' + alphaDeg.toFixed(0) + '°', C.x - 40, C.y + 60);
+                ctx.fillText('γ₂ = ' + betaDeg.toFixed(0) + '°', C.x + 40, C.y + 80);
+            }
+
+            // 4. Linien
+            ctx.beginPath();
+            ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y);
+            ctx.lineWidth = 1.5; ctx.strokeStyle = '#ff0000'; ctx.stroke(); 
+
+            ctx.beginPath();
+            ctx.moveTo(A.x, A.y); ctx.lineTo(C.x, C.y); ctx.lineTo(B.x, B.y);
+            ctx.strokeStyle = '#8b4513'; ctx.stroke(); 
+
+            // Radius MC bei Bedarf
+            if (state.t1 || state.t2 || state.t3) {
+                ctx.beginPath();
+                ctx.moveTo(M.x, M.y); ctx.lineTo(C.x, C.y);
+                ctx.strokeStyle = '#000000'; ctx.lineWidth = 1; ctx.stroke(); 
+            }
+
+            // 5. Buchstaben & Strecken
+            ctx.fillStyle = '#8b4513';
+            ctx.font = '16px Arial';
+            ctx.fillText('b', A.x + (C.x - A.x)/2 - 15, A.y + (C.y - A.y)/2 - 15);
+            ctx.fillText('a', B.x + (C.x - B.x)/2 + 15, B.y + (C.y - B.y)/2 - 15);
+            
+            // Hypotenuse c (deutlich weiter unten positioniert: M.y + 35)
+            ctx.fillStyle = '#ff0000';
+            ctx.fillText('c', M.x, M.y + 35);
+
+            // Radien r
+            if (state.t2) {
+                ctx.fillStyle = '#ff0000';
+                ctx.fillText('r', A.x + 150, M.y + 15);
+                ctx.fillText('r', M.x + 150, M.y + 15);
+            }
+            if (state.t1 || state.t3) {
+                ctx.fillStyle = '#000000';
+                ctx.fillText('r', M.x + (C.x - M.x)/2 + 15, M.y + (C.y - M.y)/2);
+            }
+
+            // 6. Eckpunkte
+            drawPoint(A.x, A.y, 'A', false);
+            drawPoint(B.x, B.y, 'B', false);
+            drawPoint(M.x, M.y, 'M', true);
+            drawPoint(C.x, C.y, 'C', false);
+        }
+
+        function drawPoint(x, y, label, isCenter) {
+            ctx.beginPath();
+            ctx.arc(x, y, 5, 0, 2 * Math.PI);
+            ctx.fillStyle = '#0000ff';
+            ctx.fill();
+            
+            ctx.fillStyle = '#0000ff';
+            ctx.font = '16px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText(label, x, y - (isCenter ? 12 : 8));
+        }
+
+        // --- Interaktion ---
+        function getCanvasPos(evt) {
+            var rect = canvas.getBoundingClientRect();
+            var scaleX = canvas.width / rect.width;
+            var scaleY = canvas.height / rect.height;
+            var cx = evt.clientX;
+            var cy = evt.clientY;
+            
+            if (evt.touches && evt.touches.length > 0) {
+                cx = evt.touches[0].clientX;
+                cy = evt.touches[0].clientY;
+            }
+            return { x: (cx - rect.left) * scaleX, y: (cy - rect.top) * scaleY };
+        }
+
+        function startDrag(evt) {
+            var pos = getCanvasPos(evt);
+            var cx = centerX + radiusCircle * Math.cos(angleC_rad);
+            var cy = centerY - radiusCircle * Math.sin(angleC_rad);
+            
+            if (Math.abs(pos.x - cx) < 60 && Math.abs(pos.y - cy) < 60) {
+                isDraggingC = true;
+                evt.preventDefault();
+            }
+        }
+
+        function drag(evt) {
+            if (!isDraggingC) return;
+            evt.preventDefault();
+            var pos = getCanvasPos(evt);
+            var t = Math.atan2(centerY - pos.y, pos.x - centerX);
+            
+            if (t < 0.05) t = 0.05;
+            if (t > Math.PI - 0.05) t = Math.PI - 0.05;
+            
+            angleC_rad = t;
+            drawScene();
+        }
+
+        function stopDrag() {
+            isDraggingC = false;
+        }
+
+        canvas.addEventListener('mousedown', startDrag);
+        window.addEventListener('mousemove', drag);
+        window.addEventListener('mouseup', stopDrag);
+        canvas.addEventListener('touchstart', startDrag, { passive: false });
+        window.addEventListener('touchmove', drag, { passive: false });
+        window.addEventListener('touchend', stopDrag);
+
+        // --- Steuerung ---
+        function updateState() {
+            state.vermutung = document.getElementById('checkVermutung').checked;
+            state.satz = document.getElementById('checkSatz').checked;
+            state.t1 = document.getElementById('checkTipp1').checked;
+            state.t2 = document.getElementById('checkTipp2').checked;
+            state.t3 = document.getElementById('checkTipp3').checked;
+            
+            // Satz ein/ausblenden
+            document.getElementById('theoremBlock').style.display = state.satz ? 'block' : 'none';
+            // Winkelwerte-Block ein/ausblenden
+            document.getElementById('angleValuesBlock').style.display = state.t3 ? 'block' : 'none';
+            
+            drawScene();
+        }
+
+        var checkboxes = document.querySelectorAll('input[type="checkbox"]');
+        for (var i = 0; i < checkboxes.length; i++) {
+            checkboxes[i].addEventListener('change', updateState);
+        }
+
+        // Erstes Zeichnen
+        updateState();
+
+    } catch (error) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#ff0000';
+        ctx.font = 'bold 20px Arial';
+        ctx.fillText("Es gab einen Programmfehler:", 20, 50);
+        ctx.font = '16px Arial';
+        ctx.fillText(error.message, 20, 80);
+    }
+});
+</script>
+
+</body>
+</html>

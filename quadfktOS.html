@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Parameter quadratischer Funktionen</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .header-box {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            width: 100%;
+            max-width: 900px;
+            margin-bottom: 20px;
+            text-align: center;
+            border-top: 6px solid #007bff;
+        }
+
+        h1 { margin: 0 0 10px 0; color: #2c3e50; font-size: 24px; }
+        .instruction { font-size: 16px; color: #555; line-height: 1.5; }
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        /* Steuerungsbereich */
+        .controls-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+        }
+
+        .card {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-top: 4px solid #ccc;
+        }
+
+        .card-f1 { border-top-color: #ff7f0e; }
+        .card-f2 { border-top-color: #9467bd; }
+        .card-base { border-top-color: #2ca02c; }
+
+        .check-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 15px;
+            cursor: pointer;
+        }
+
+        .check-row input { transform: scale(1.3); cursor: pointer; }
+
+        .slider-row {
+            margin-bottom: 10px;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            margin-bottom: 5px;
+            color: #666;
+            font-weight: bold;
+        }
+
+        input[type=range] { width: 100%; cursor: pointer; }
+
+        .reset-btn {
+            padding: 10px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            margin-top: 10px;
+            transition: background 0.2s;
+        }
+        
+        .reset-btn:hover { background: #5a6268; }
+
+        /* Grafikbereich */
+        .canvas-card {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: center;
+        }
+
+        canvas {
+            border: 1px solid #ddd;
+            background: #fff;
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-box">
+        <h1>Einfluss der Parameter auf quadratische Funktionen</h1>
+        <div class="instruction">
+            Untersuche nacheinander das Verhalten der Funktionsgraphen f<sub>1</sub>(x) und f<sub>2</sub>(x) bei Veränderung der Parameter a, c, d und e. Protokolliere deine Ergebnisse.
+        </div>
+    </div>
+
+    <div class="app-container">
+        <div class="controls-panel">
+            <div class="card card-f1">
+                <label class="check-row" style="color: #ff7f0e;">
+                    <input type="checkbox" id="sh1" > f<sub>1</sub>(x) = a&middot;x&sup2; + c
+                </label>
+                <div class="slider-row">
+                    <div class="slider-label">a = <span id="av">1.0</span></div>
+                    <input type="range" id="a" min="-5" max="5" step="0.1" value="1">
+                </div>
+                <div class="slider-row">
+                    <div class="slider-label">c = <span id="cv">0.0</span></div>
+                    <input type="range" id="c" min="-10" max="10" step="0.1" value="0">
+                </div>
+            </div>
+
+            <div class="card card-f2">
+                <label class="check-row" style="color: #9467bd;">
+                    <input type="checkbox" id="sh2" > f<sub>2</sub>(x) = (x + d)&sup2; + e
+                </label>
+                <div class="slider-row">
+                    <div class="slider-label">d = <span id="dv">0.0</span></div>
+                    <input type="range" id="d" min="-10" max="10" step="0.1" value="0">
+                </div>
+                <div class="slider-row">
+                    <div class="slider-label">e = <span id="ev">0.0</span></div>
+                    <input type="range" id="e" min="-10" max="10" step="0.1" value="0">
+                </div>
+            </div>
+
+            <div class="card card-base">
+                <label class="check-row" style="color: #2ca02c;">
+                    <input type="checkbox" id="shB" > f(x) = x&sup2;
+                </label>
+                <button class="reset-btn" onclick="resetAll()">Alles zurücksetzen</button>
+            </div>
+        </div>
+
+        <div class="canvas-card">
+            <canvas id="mainCanvas" width="600" height="600"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('mainCanvas');
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width;
+        const H = canvas.height;
+        const scale = 30; // 30 Pixel pro Einheit (-10 bis 10)
+
+        function toPx(val) { return W/2 + val * scale; }
+        function toPy(val) { return H/2 - val * scale; }
+
+        function draw() {
+            // Sicherheits-Abbruch, falls Canvas noch nicht bereit
+            if (!ctx) return; 
+
+            ctx.clearRect(0, 0, W, H);
+
+            // Gitter zeichnen
+            ctx.strokeStyle = "#eef0f2";
+            ctx.lineWidth = 1;
+            for(let i = -10; i <= 10; i++) {
+                ctx.beginPath(); ctx.moveTo(toPx(i), 0); ctx.lineTo(toPx(i), H); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, toPy(i)); ctx.lineTo(W, toPy(i)); ctx.stroke();
+            }
+
+            // Achsen mit Beschriftung
+            ctx.strokeStyle = "#333";
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(0, H/2); ctx.lineTo(W, H/2); ctx.stroke(); // X
+            ctx.beginPath(); ctx.moveTo(W/2, 0); ctx.lineTo(W/2, H); ctx.stroke(); // Y
+
+            // Pfeile
+            ctx.fillStyle = "#333";
+            ctx.beginPath(); ctx.moveTo(W, H/2); ctx.lineTo(W-10, H/2-5); ctx.lineTo(W-10, H/2+5); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(W/2, 0); ctx.lineTo(W/2-5, 10); ctx.lineTo(W/2+5, 10); ctx.fill();
+
+            // Achsen-Beschriftung (Zahlen 1, 2, 3...)
+            ctx.font = "12px Arial";
+            ctx.fillStyle = "#666";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "top";
+            
+            for(let i = -10; i <= 10; i++) {
+                if(i === 0) continue;
+                // X-Achse Zahlen
+                ctx.fillText(i, toPx(i), H/2 + 8);
+                // Y-Achse Zahlen
+                ctx.textAlign = "right";
+                ctx.textBaseline = "middle";
+                ctx.fillText(i, W/2 - 8, toPy(i));
+                ctx.textAlign = "center"; ctx.textBaseline = "top";
+            }
+            
+            // Ursprung und Achsennamen
+            ctx.textAlign = "right";
+            ctx.fillText("0", W/2 - 8, H/2 + 8);
+            ctx.font = "bold 14px Arial";
+            ctx.fillStyle = "#000";
+            ctx.fillText("x", W - 15, H/2 + 15);
+            ctx.fillText("y", W/2 + 15, 15);
+
+            // Parameter holen
+            const a = parseFloat(document.getElementById('a').value);
+            const c = parseFloat(document.getElementById('c').value);
+            const d = parseFloat(document.getElementById('d').value);
+            const e = parseFloat(document.getElementById('e').value);
+
+            // Text-Anzeige updaten (damit die Zahlen neben den Schiebereglern stimmen)
+            document.getElementById('av').innerText = a.toFixed(1);
+            document.getElementById('cv').innerText = c.toFixed(1);
+            document.getElementById('dv').innerText = d.toFixed(1);
+            document.getElementById('ev').innerText = e.toFixed(1);
+
+            // Graphen zeichnen (geclippt auf das Feld, damit nichts übersteht)
+            ctx.save();
+            ctx.beginPath(); ctx.rect(0,0,W,H); ctx.clip();
+
+            if(document.getElementById('shB').checked) plot(x => x*x, "#2ca02c", 2);
+            if(document.getElementById('sh1').checked) plot(x => a*x*x + c, "#ff7f0e", 3);
+            if(document.getElementById('sh2').checked) plot(x => Math.pow(x+d, 2) + e, "#9467bd", 3);
+
+            ctx.restore();
+        }
+
+        // Hilfsfunktion zum Linienzeichnen
+        function plot(fn, color, width) {
+            ctx.beginPath();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            let first = true;
+            for(let x = -10.1; x <= 10.1; x += 0.05) { // Feinere Schritte für weichere Kurven
+                let y = fn(x);
+                // Nur zeichnen, wenn der y-Wert nicht völlig aus dem Ruder läuft (Performance-Schutz)
+                if(y >= -20 && y <= 20) {
+                    if(first) {
+                        ctx.moveTo(toPx(x), toPy(y));
+                        first = false;
+                    } else {
+                        ctx.lineTo(toPx(x), toPy(y));
+                    }
+                } else {
+                    first = true; // Setzt Stift neu an, wenn Kurve aus dem Bild fliegt
+                }
+            }
+            ctx.stroke();
+        }
+
+        // Reset Funktion
+        function resetAll() {
+            document.getElementById('a').value = 1;
+            document.getElementById('c').value = 0;
+            document.getElementById('d').value = 0;
+            document.getElementById('e').value = 0;
+            document.getElementById('sh1').checked = false;
+            document.getElementById('sh2').checked = false;
+            document.getElementById('shB').checked = false;
+            draw();
+        }
+
+        // EVENT-LISTENER (Kugelsicher)
+        
+        // Schieberegler überwachen
+        document.querySelectorAll('input[type="range"]').forEach(input => {
+            input.addEventListener('input', draw);
+            input.addEventListener('change', draw); // Fallback für ältere Browser
+        });
+
+        // Checkboxen explizit überwachen
+        document.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+            chk.addEventListener('change', draw);
+        });
+
+        // INIT: Zweistufiger Start, um Verzögerungen im Browserfenster abzufangen
+        draw(); // 1. Versuch: Sofort beim Einlesen
+        window.addEventListener('load', draw); // 2. Versuch: Wenn alles geladen ist
+        setTimeout(draw, 100); // 3. Versuch: 0.1 Sekunden später als absoluter Fallback
+    </script>
+</body>
+</html>

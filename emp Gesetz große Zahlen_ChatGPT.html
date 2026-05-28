@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Relative Häufigkeit der 6</title>
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #f4f4f4;
+        margin: 30px;
+        color: #222;
+    }
+
+    h1 {
+        text-align: center;
+    }
+
+    p {
+        text-align: center;
+        max-width: 900px;
+        margin: auto;
+        line-height: 1.5;
+    }
+
+    .controls {
+        text-align: center;
+        margin: 25px 0;
+    }
+
+    button {
+        padding: 10px 18px;
+        margin: 5px;
+        font-size: 16px;
+        border: none;
+        border-radius: 8px;
+        background: #2563eb;
+        color: white;
+        cursor: pointer;
+    }
+
+    button:hover {
+        background: #1d4ed8;
+    }
+
+    .info {
+        background: white;
+        padding: 18px;
+        border-radius: 12px;
+        max-width: 700px;
+        margin: 0 auto 25px auto;
+        line-height: 1.8;
+        font-size: 18px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .canvas-container {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        max-width: 1050px;
+        margin: auto;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    canvas {
+        width: 100%;
+        height: auto;
+        border: 1px solid #ccc;
+    }
+</style>
+</head>
+
+<body>
+
+<h1>Relative Häufigkeit der Augenzahl 6</h1>
+
+
+
+<div class="controls">
+    <button onclick="rollDie()">1× würfeln</button>
+    <button onclick="roll100()">100× würfeln</button>
+    <button onclick="resetSimulation()">Zurücksetzen</button>
+</div>
+
+<div class="info">
+    <div><strong>Letzter Wurf:</strong> <span id="lastRoll">–</span></div>
+    <div><strong>Anzahl der Würfe:</strong> <span id="totalRolls">0</span></div>
+    <div><strong>Absolute Häufigkeit der 6:</strong> <span id="sixCount">0</span></div>
+    <div><strong>Relative Häufigkeit der 6:</strong> <span id="relativeFreq">0.000</span></div>
+    <div><strong>Theoretische Wahrscheinlichkeit:</strong> 1/6 ≈ 0.167</div>
+</div>
+
+<div class="canvas-container">
+    <canvas id="chart" width="1000" height="500"></canvas>
+</div>
+
+<script>
+
+const canvas = document.getElementById("chart");
+const ctx = canvas.getContext("2d");
+
+let totalRolls = 0;
+let sixCount = 0;
+
+const values = [];
+
+function updateInfo(lastRoll, relFreq) {
+
+    document.getElementById("lastRoll").textContent = lastRoll;
+    document.getElementById("totalRolls").textContent = totalRolls;
+    document.getElementById("sixCount").textContent = sixCount;
+    document.getElementById("relativeFreq").textContent =
+        relFreq.toFixed(3);
+}
+
+function rollDie() {
+
+    const roll = Math.floor(Math.random() * 6) + 1;
+
+    totalRolls++;
+
+    if (roll === 6) {
+        sixCount++;
+    }
+
+    const relFreq = sixCount / totalRolls;
+
+    values.push(relFreq);
+
+    updateInfo(roll, relFreq);
+
+    drawChart();
+}
+
+function roll100() {
+
+    for (let i = 0; i < 100; i++) {
+        rollDie();
+    }
+}
+
+function resetSimulation() {
+
+    totalRolls = 0;
+    sixCount = 0;
+
+    values.length = 0;
+
+    updateInfo("–", 0);
+
+    drawChart();
+}
+
+function drawChart() {
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const left = 60;
+    const right = 950;
+    const top = 30;
+    const bottom = 450;
+
+    const width = right - left;
+    const height = bottom - top;
+
+    // Achsen
+    ctx.beginPath();
+    ctx.moveTo(left, top);
+    ctx.lineTo(left, bottom);
+    ctx.lineTo(right, bottom);
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Y-Achsen-Beschriftung
+    ctx.font = "14px Arial";
+    ctx.fillStyle = "black";
+
+    for (let i = 0; i <= 10; i++) {
+
+        const y = bottom - (i / 10) * height;
+        const value = (i / 10).toFixed(1);
+
+        ctx.beginPath();
+        ctx.moveTo(left - 5, y);
+        ctx.lineTo(left + 5, y);
+        ctx.stroke();
+
+        ctx.fillText(value, 15, y + 5);
+    }
+
+    // X-Achsen-Beschriftung
+    if (totalRolls > 0) {
+
+        for (let i = 0; i <= 10; i++) {
+
+            const x = left + (i / 10) * width;
+            const value = Math.round((i / 10) * totalRolls);
+
+            ctx.beginPath();
+            ctx.moveTo(x, bottom - 5);
+            ctx.lineTo(x, bottom + 5);
+            ctx.stroke();
+
+            ctx.fillText(value, x - 10, bottom + 20);
+        }
+    }
+
+    // Horizontale Linie bei 1/6
+    const theoryY = bottom - (1/6) * height;
+
+    ctx.beginPath();
+    ctx.setLineDash([8, 6]);
+    ctx.moveTo(left, theoryY);
+    ctx.lineTo(right, theoryY);
+    ctx.strokeStyle = "red";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = "red";
+    ctx.fillText("1/6", right - 35, theoryY - 8);
+
+    // Liniengraph
+    if (values.length > 1) {
+
+        ctx.beginPath();
+
+        for (let i = 0; i < values.length; i++) {
+
+            const x = left + (i / (values.length - 1)) * width;
+            const y = bottom - values[i] * height;
+
+            if (i === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        }
+
+        ctx.strokeStyle = "#2563eb";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    }
+
+    // Titel Achsen
+    ctx.fillStyle = "black";
+
+    ctx.fillText("Relative Häufigkeit", 10, 20);
+    ctx.fillText("Anzahl der Würfe", 450, 490);
+}
+
+drawChart();
+
+</script>
+
+</body>
+</html>

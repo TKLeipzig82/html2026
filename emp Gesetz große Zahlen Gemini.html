@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gesetz der großen Zahlen - Würfel</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #333;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+
+        /* Das Dashboard für die Werte */
+        #dashboard {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            width: 100%;
+            max-width: 800px;
+            margin-bottom: 20px;
+        }
+
+        .stat-box {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px 20px;
+            text-align: center;
+            min-width: 120px;
+            flex: 1;
+        }
+
+        .stat-title {
+            font-size: 14px;
+            color: #6c757d;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        .stat-value.highlight {
+            color: #28a745; /* Grün für den eigentlichen Wurf */
+        }
+
+        /* Bereich für die Buttons */
+        #controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            background-color: #007bff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            touch-action: manipulation;
+        }
+
+        button:active { transform: scale(0.95); }
+        button:hover { background-color: #0056b3; }
+        button.btn-fast { background-color: #6f42c1; }
+        button.btn-fast:hover { background-color: #5a32a3; }
+        button.btn-reset { background-color: #dc3545; }
+        button.btn-reset:hover { background-color: #c82333; }
+
+        /* Container für das Diagramm */
+        #chart-container {
+            width: 100%;
+            max-width: 800px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+        }
+
+        /* Das Canvas Element, in das wir selbst zeichnen */
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            max-height: 400px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Empirisches Gesetz der großen Zahlen am Beispiel der Augenzahl 6 eines Würfels</h1>
+
+    <div id="dashboard">
+        <div class="stat-box">
+            <div class="stat-title">Aktueller Wurf</div>
+            <div class="stat-value highlight" id="val-wurf">-</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-title">Anzahl Würfe (n)</div>
+            <div class="stat-value" id="val-n">0</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-title">Absolute Häufigkeit der 6</div>
+            <div class="stat-value" id="val-abs">0</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-title">Relative Häufigkeit der 6</div>
+            <div class="stat-value" id="val-rel">0.0000</div>
+        </div>
+    </div>
+
+    <div id="controls">
+        <button id="btn-roll1">1x Würfeln</button>
+        <button id="btn-roll100" class="btn-fast">100x Würfeln</button>
+        <button id="btn-reset" class="btn-reset">Zurücksetzen</button>
+    </div>
+
+    <div id="chart-container">
+        <canvas id="myChart" width="800" height="400"></canvas>
+    </div>
+
+    <script>
+        // Variablen für die Statistik
+        let n = 0;           
+        let absFreq6 = 0;    
+        let historyRelFreq = []; // Speichert alle relativen Häufigkeiten für das Diagramm
+
+        // HTML-Elemente abgreifen
+        const valWurf = document.getElementById('val-wurf');
+        const valN = document.getElementById('val-n');
+        const valAbs = document.getElementById('val-abs');
+        const valRel = document.getElementById('val-rel');
+        const canvas = document.getElementById('myChart');
+        const ctx = canvas.getContext('2d');
+
+        // Funktion zum Zeichnen des eigenen Diagramms
+        function drawChart() {
+            // Zeichenfläche komplett leeren
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Ränder für Achsen und Beschriftungen definieren
+            const padLeft = 60;
+            const padRight = 30;
+            const padTop = 45; // Etwas vergrößert, damit die neue Beschriftung hinpasst
+            const padBottom = 50;
+            
+            // Reale Breite/Höhe des Graphenbereichs
+            const gWidth = canvas.width - padLeft - padRight;
+            const gHeight = canvas.height - padTop - padBottom;
+
+            // 1. ACHSEN ZEICHNEN
+            ctx.beginPath();
+            ctx.moveTo(padLeft, padTop); // Y-Achse oben
+            ctx.lineTo(padLeft, padTop + gHeight); // Nullpunkt
+            ctx.lineTo(padLeft + gWidth, padTop + gHeight); // X-Achse rechts
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // 2. Y-ACHSE BESCHRIFTEN (0 bis 1)
+            ctx.fillStyle = '#666';
+            ctx.font = '14px sans-serif';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            
+            const yValues = [0, 0.2, 0.4, 0.6, 0.8, 1.0];
+            yValues.forEach(val => {
+                let yPos = padTop + gHeight - (val * gHeight);
+                ctx.fillText(val.toFixed(1), padLeft - 10, yPos);
+                
+                // Kleine Hilfsstriche an der Y-Achse
+                ctx.beginPath();
+                ctx.moveTo(padLeft - 5, yPos);
+                ctx.lineTo(padLeft, yPos);
+                ctx.stroke();
+            });
+
+            // NEU: Beschriftung der Y-Achse (ganz simpel und waagerecht oben drüber)
+            ctx.fillStyle = '#333';
+            ctx.font = 'bold 14px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText('rel. Häufigkeit h(n)', padLeft, padTop - 15);
+
+            // 3. THEORETISCHE WAHRSCHEINLICHKEIT (Rote gestrichelte Linie bei 1/6)
+            let y16 = padTop + gHeight - ((1/6) * gHeight);
+            ctx.beginPath();
+            ctx.moveTo(padLeft, y16);
+            ctx.lineTo(padLeft + gWidth, y16);
+            ctx.strokeStyle = '#dc3545';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]); // Gestrichelte Linie
+            ctx.stroke();
+            ctx.setLineDash([]); // Zurücksetzen für weitere Linien
+            
+            // Beschriftung "1/6" rot markieren
+            ctx.fillStyle = '#dc3545';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('1/6', padLeft - 10, y16);
+
+            // 4. X-ACHSE SKALIEREN & BESCHRIFTEN
+            let maxX = Math.max(200, n);
+            
+            ctx.fillStyle = '#666';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            ctx.fillText('0', padLeft, padTop + gHeight + 10);
+            ctx.fillText(maxX, padLeft + gWidth, padTop + gHeight + 10);
+            
+            // Achsen-Titel X
+            ctx.font = 'bold 14px sans-serif';
+            ctx.fillStyle = '#333';
+            ctx.fillText('Anzahl der Würfe (n)', padLeft + (gWidth / 2), padTop + gHeight + 30);
+
+            // 5. DATEN-LINIE ZEICHNEN (Blaue Kurve)
+            if (historyRelFreq.length > 0) {
+                ctx.beginPath();
+                ctx.strokeStyle = '#007bff';
+                ctx.lineWidth = 2;
+                ctx.lineJoin = 'round'; 
+                
+                for(let i = 0; i < historyRelFreq.length; i++) {
+                    let xPos = padLeft + ((i + 1) / maxX) * gWidth;
+                    let yPos = padTop + gHeight - (historyRelFreq[i] * gHeight);
+                    
+                    if (i === 0) {
+                        ctx.moveTo(xPos, yPos);
+                    } else {
+                        ctx.lineTo(xPos, yPos);
+                    }
+                }
+                ctx.stroke();
+            }
+        }
+
+        // Initiales Zeichnen
+        drawChart();
+
+        // Würfel-Logik
+        function rollDie(times) {
+            let lastRoll = 0;
+
+            for (let i = 0; i < times; i++) {
+                n++;
+                lastRoll = Math.floor(Math.random() * 6) + 1; 
+                if (lastRoll === 6) {
+                    absFreq6++;
+                }
+                let currentRelFreq = absFreq6 / n;
+                historyRelFreq.push(currentRelFreq);
+            }
+
+            // Dashboard aktualisieren
+            valWurf.innerText = lastRoll;
+            valN.innerText = n;
+            valAbs.innerText = absFreq6;
+            valRel.innerText = (absFreq6 / n).toFixed(4); 
+
+            drawChart();
+        }
+
+        // Event Listener
+        document.getElementById('btn-roll1').addEventListener('click', () => { rollDie(1); });
+        document.getElementById('btn-roll100').addEventListener('click', () => { rollDie(100); });
+        document.getElementById('btn-reset').addEventListener('click', () => {
+            n = 0;
+            absFreq6 = 0;
+            historyRelFreq = [];
+            valWurf.innerText = '-';
+            valN.innerText = '0';
+            valAbs.innerText = '0';
+            valRel.innerText = '0.0000';
+            drawChart();
+        });
+    </script>
+</body>
+</html>

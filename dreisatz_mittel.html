@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dreisatz Test</title>
+</head>
+<body style="text-align: center; padding: 50px;">
+    <h2>Dreisatz Aufgabe</h2>
+    <p>10 Hefte kosten 15 Euro. Wie viel kosten 12 Hefte?</p>
+    <input type="number" id="ergebnis" placeholder="Antwort">
+    <button onclick="pruefen()">Prüfen</button>
+    <p id="antwort"></p>
+
+    <script>
+        function pruefen() {
+            var erg = document.getElementById('ergebnis').value;
+            if(erg == 18) {
+                document.getElementById('antwort').innerHTML = "Richtig!";
+            } else {
+                document.getElementById('antwort').innerHTML = "Falsch, versuch es nochmal.";
+            }
+        }
+    </script>
+</body>
+</html>
