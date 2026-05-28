@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kugel-Rennen (10 Bahnen)</title>
+<style>
+  body { 
+    font-family: Arial, sans-serif; 
+    text-align: center; 
+    background: #f0f2f5; 
+    padding: 20px; 
+    min-height: 100vh;
+    margin: 0;
+    color: #333;
+  }
+  h1 { margin-bottom: 5px; color: #2c3e50; }
+  p { margin-top: 5px; color: #555; line-height: 1.4; font-size: 15px; }
+  
+  .btn { 
+    font-size: 16px; 
+    padding: 12px 20px; 
+    background: #007bff; 
+    color: white; 
+    border: none; 
+    border-radius: 6px; 
+    margin: 5px; 
+    cursor: pointer;
+    transition: transform 0.1s, filter 0.2s;
+  }
+  .btn:hover { filter: brightness(1.1); transform: translateY(-2px); }
+  .btn:active { transform: translateY(0); }
+  .btn:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+  
+  .btn-sim { background: #ff9800; }
+  .btn-sim-large { background: #e65100; font-weight: bold; }
+  .btn-reset { background: #f44336; }
+  
+  .board { 
+    background: white; 
+    padding: 15px; 
+    border-radius: 12px; 
+    display: inline-block; 
+    text-align: left; 
+    margin: 15px 0; 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    min-width: 600px;
+    min-height: 50px; /* Verhindert, dass die Box komplett kollabiert */
+  }
+  .track { 
+    display: flex; 
+    align-items: center; 
+    margin: 6px 0; 
+    border-bottom: 1px solid #eee;
+    padding-bottom: 6px;
+  }
+  .track:last-child { border-bottom: none; padding-bottom: 0; }
+  
+  .label { 
+    width: 170px; 
+    font-weight: bold; 
+    font-size: 14px;
+    color: #444;
+  }
+  .label small { color: #888; font-weight: normal; }
+  
+  .steps { display: flex; flex-wrap: nowrap; }
+  
+  .step { 
+    width: 38px; 
+    height: 32px; 
+    margin: 0 3px; 
+    border: 2px solid #e0e0e0; 
+    border-radius: 6px; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    background: #fafafa; 
+    font-size: 14px; 
+    font-weight: bold;
+    color: transparent; 
+  }
+  .active { 
+    background: #fff9c4; 
+    border-color: #fbc02d; 
+    color: black; 
+  }
+  .winner { 
+    background: #c8e6c9; 
+    border-color: #4caf50; 
+    color: black; 
+  }
+  .step.ziel {
+    color: #999;
+  }
+  
+  #message { 
+    font-size: 20px; 
+    font-weight: bold; 
+    margin: 15px; 
+    min-height: 25px; 
+    color: #1976d2;
+  }
+  
+  .stats-container {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    max-width: 900px;
+    margin: 20px auto 0 auto;
+  }
+  .stat-box { 
+    background: white; 
+    padding: 10px; 
+    border-radius: 8px; 
+    border-top: 4px solid #007bff; 
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    font-size: 14px;
+  }
+  .abs-val { font-size: 22px; font-weight: bold; display: block; margin: 3px 0; }
+  .rel-val { font-size: 14px; color: #666; font-weight: bold; }
+  #totalGames { font-size: 16px; color: #777; margin-top: 20px; font-weight: bold; }
+</style>
+</head>
+<body>
+  
+  <h1>Mega-Kugel-Rennen (10 Bahnen)</h1>
+  <p>Im Hintergrund simulieren wir eine <b>Urne mit mit 55 Kugeln</b>. Wir ziehen <b>mit Zurücklegen</b> solange, <b>bis eine Bahn gewinnt</b>.<br><br>
+  Es gibt <b>eine</b> Kugel mit der <b>"1"</b>, <b>zwei</b> Kugeln mit der <b>"2"</b>, <b>drei</b> Kugeln mit der <b>"3"</b> ... bis <b>zehn</b> Kugeln mit der <b>"10"</b>.</p>
+  
+  <div id="message">Das Spiel gewinnt, wer zuerst im Ziel ist. Bereit! Ziehe eine Kugel aus dem Topf...</div>
+
+  <div class="board" id="board"></div>
+  
+  <div>
+    <button class="btn" id="btnManual" onclick="playStep()">🎱 Manuell Ziehen</button>
+    <button class="btn btn-sim" onclick="simulateGames(100)">⚡ 100 simulieren</button>
+    <button class="btn btn-sim-large" onclick="simulateGames(1000)">🚀 1000 simulieren</button>
+    <button class="btn btn-reset" onclick="fullReset()">🗑️ Alles auf Null</button>
+  </div>
+
+  <div class="stats-container" id="stats"></div>
+  <div id="totalGames">Gespielte Spiele insgesamt: 0</div>
+
+<script>
+  const NUM_TRACKS = 10;
+  let pos = Array(NUM_TRACKS + 1).fill(0);
+  let wins = Array(NUM_TRACKS + 1).fill(0);
+  let gameOver = false;
+
+  let trackRanges = [];
+  let currentNum = 1;
+  for(let i = 1; i <= NUM_TRACKS; i++) {
+      let endNum = currentNum + i - 1;
+      trackRanges[i] = { start: currentNum, end: endNum };
+      currentNum = endNum + 1;
+  }
+  const MAX_DICE = currentNum - 1; 
+
+  function initUI() {
+    const board = document.getElementById('board');
+    const stats = document.getElementById('stats');
+    
+    if (!board || !stats) {
+        alert("Achtung: Die Bereiche für das Spielfeld oder die Statistik wurden im Code nicht gefunden!");
+        return;
+    }
+
+    board.innerHTML = '';
+    stats.innerHTML = '';
+
+    for(let i = 1; i <= NUM_TRACKS; i++) {
+      let trackDiv = document.createElement('div');
+      trackDiv.className = 'track';
+      
+      trackDiv.innerHTML = `<div class="label">Bahn ${i}<br><small>${i} Schritt(e); ${i} Kugel(n)</small></div>`;
+      
+      let stepsDiv = document.createElement('div');
+      stepsDiv.className = 'steps';
+      
+      for(let j = 0; j <= i; j++) {
+        let step = document.createElement('div');
+        step.id = `s${i}-${j}`;
+        
+        if(j === i) {
+            step.className = 'step ziel';
+            step.innerHTML = '🏁';
+        } else {
+            step.className = 'step';
+        }
+        
+        stepsDiv.appendChild(step);
+      }
+      trackDiv.appendChild(stepsDiv);
+      board.appendChild(trackDiv);
+
+      let statBox = document.createElement('div');
+      statBox.className = 'stat-box';
+      statBox.innerHTML = `Bahn ${i}<span class="abs-val" id="w${i}">0</span><span class="rel-val" id="p${i}">0,0 %</span>`;
+      stats.appendChild(statBox);
+    }
+    updateUI();
+  }
+
+  function updateUI() {
+    for(let i = 1; i <= NUM_TRACKS; i++) {
+      for(let j = 0; j <= i; j++) {
+        let el = document.getElementById(`s${i}-${j}`);
+        if(el) {
+            if(j === i) {
+                el.className = 'step ziel';
+                el.innerText = '🏁';
+            } else {
+                el.className = 'step';
+                el.innerText = ''; 
+            }
+        }
+      }
+      
+      let currentEl = document.getElementById(`s${i}-${pos[i]}`);
+      if(currentEl) {
+          if(pos[i] === i) {
+            currentEl.className = 'step winner';
+            currentEl.innerText = '🏆'; 
+          } else {
+            currentEl.className = 'step active';
+            currentEl.innerText = '♟'; 
+          }
+      }
+    }
+    
+    let totalWins = wins.reduce((a, b) => a + b, 0);
+    let totalGamesEl = document.getElementById('totalGames');
+    if(totalGamesEl) totalGamesEl.innerText = 'Gespielte Spiele insgesamt: ' + totalWins;
+    
+    for(let i = 1; i <= NUM_TRACKS; i++) {
+      let wEl = document.getElementById(`w${i}`);
+      let pEl = document.getElementById(`p${i}`);
+      if(wEl && pEl) {
+          wEl.innerText = wins[i];
+          let percentString = "0,0";
+          if (totalWins > 0) {
+              percentString = ((wins[i] / totalWins) * 100).toFixed(1).replace('.', ',');
+          }
+          pEl.innerText = percentString + ' %';
+      }
+    }
+  }
+
+  function getTrackForRoll(roll) {
+      for(let i = 1; i <= NUM_TRACKS; i++) {
+          if(roll >= trackRanges[i].start && roll <= trackRanges[i].end) return i;
+      }
+      return 1;
+  }
+
+  function playStep() {
+    if (gameOver) {
+        resetBoard();
+        return;
+    }
+    
+    let roll = Math.floor(Math.random() * MAX_DICE) + 1;
+    let targetTrack = getTrackForRoll(roll);
+    
+    pos[targetTrack]++;
+    
+    let winner = 0;
+    for(let i = 1; i <= NUM_TRACKS; i++) {
+        if(pos[i] >= i) { winner = i; gameOver = true; break; }
+    }
+
+    if(gameOver) wins[winner]++;
+    
+    updateUI();
+    
+    let msgEl = document.getElementById('message');
+    let btnEl = document.getElementById('btnManual');
+    
+    if(msgEl && btnEl) {
+        if(!gameOver) {
+          msgEl.innerHTML = `🎱 Es wurde eine <b>${targetTrack}</b> gezogen, Bahn ${targetTrack} rückt vor.`;
+        } else {
+          msgEl.innerHTML = `🎱 Es wurde eine <b>${targetTrack}</b> gezogen — 🎉 Bahn ${winner} gewinnt!`;
+          btnEl.innerText = '🔄 Nächstes Spiel';
+        }
+    }
+  }
+
+  function resetBoard() {
+    pos = Array(NUM_TRACKS + 1).fill(0);
+    gameOver = false;
+    let msgEl = document.getElementById('message');
+    let btnEl = document.getElementById('btnManual');
+    if(msgEl) msgEl.innerHTML = 'Das Spiel gewinnt, wer zuerst im Ziel ist. Bereit! Ziehe eine Kugel aus dem Topf...';
+    if(btnEl) btnEl.innerText = '🎱 Manuell Ziehen';
+    updateUI();
+  }
+
+  function simulateGames(count) {
+    for(let g = 0; g < count; g++) {
+      let tempPos = Array(NUM_TRACKS + 1).fill(0);
+      while(true) {
+        let r = Math.floor(Math.random() * MAX_DICE) + 1;
+        let t = getTrackForRoll(r);
+        tempPos[t]++;
+        if(tempPos[t] >= t) { 
+            wins[t]++; 
+            break; 
+        }
+      }
+    }
+    resetBoard();
+    let msgEl = document.getElementById('message');
+    if(msgEl) msgEl.innerHTML = `🚀 <b>${count}</b> Spiele wurden blitzschnell simuliert!`;
+  }
+
+  function fullReset() {
+    wins = Array(NUM_TRACKS + 1).fill(0);
+    resetBoard();
+    let msgEl = document.getElementById('message');
+    if(msgEl) msgEl.innerHTML = '🗑️ Alles auf Null gesetzt. Bereit für die nächste Runde!';
+  }
+
+  // WICHTIG: Dies sorgt dafür, dass das Script erst loslegt, wenn die Seite GANZ fertig geladen ist!
+  window.onload = function() {
+      initUI();
+  };
+</script>
+</body>
+</html>

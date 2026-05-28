@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bruch-Memory</title>
+    <style>
+        /* --- CSS (Design & Responsivität) --- */
+        :root {
+            --primary-color: #2980b9;     /* Blau für Karten */
+            --accent-color: #27ae60;      /* Grün für Richtig */
+            --bg-color: #f4f7f6;
+            --text-color: #333;
+            --card-bg-front: #34495e;     /* Dunkel für Rückseite/Fragezeichen */
+            --card-bg-back: #ffffff;      /* Weiß für aufgedeckte Karte */
+            --visual-fill: #e74c3c;       /* Rote Füllung für Brüche */
+            --visual-empty: #ecf0f1;      /* Hellgrau für leere Teile */
+            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 { color: var(--primary-color); margin-bottom: 10px; font-size: 2.2em; }
+        .task-description { font-size: 1.1em; color: #555; margin-bottom: 25px; line-height: 1.4; }
+
+        /* --- Memory Grid --- */
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+            perspective: 1000px; /* Für den 3D-Flip-Effekt */
+        }
+
+        /* Responsive Anpassung für sehr kleine Bildschirme */
+        @media (max-width: 480px) {
+            .game-board { gap: 8px; }
+            .container { padding: 15px; }
+        }
+
+        /* --- Karten Design --- */
+        .card {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1 / 1; /* Hält die Karten perfekt quadratisch */
+            cursor: pointer;
+        }
+
+        .card-inner {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+            transform-style: preserve-3d;
+        }
+
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card.matched .card-inner {
+            transform: rotateY(180deg);
+            box-shadow: 0 0 15px rgba(39, 174, 96, 0.5); /* Grünes Leuchten */
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none; /* Verhindert Klick-Fehler auf Unterelementen */
+            border: 2px solid #ddd;
+        }
+
+        .card-front {
+            background-color: var(--card-bg-front);
+            color: white;
+            font-size: 2.5em;
+            font-weight: bold;
+        }
+
+        .card-front::after {
+            content: "?";
+        }
+
+        .card-back {
+            background-color: var(--card-bg-back);
+            transform: rotateY(180deg);
+            padding: 10%;
+        }
+
+        .card.matched .card-back {
+            border-color: var(--accent-color);
+            background-color: #f0fdf4;
+        }
+
+        /* --- Darstellung der Brüche (Zahlen) --- */
+        .fraction-text {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 1.8em;
+            font-weight: bold;
+            color: var(--text-color);
+        }
+
+        .fraction-text .divider {
+            width: 100%;
+            border-bottom: 3px solid var(--text-color);
+            margin: 2px 0;
+        }
+
+        /* --- Darstellung der Diagramme (Bilder) --- */
+        .shape-circle {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 2px solid #333;
+        }
+
+        .shape-grid {
+            width: 100%;
+            height: 100%;
+            border: 2px solid #333;
+            display: grid;
+            background-color: #333; /* Wirkt als Gitterlinie */
+            gap: 2px; /* Dicke der Gitterlinien */
+        }
+
+        .grid-part {
+            background-color: var(--visual-empty);
+        }
+
+        .grid-part.filled {
+            background-color: var(--visual-fill);
+        }
+
+        /* --- UI Elemente --- */
+        .feedback-panel {
+            padding: 15px;
+            border-radius: 8px;
+            background-color: #e8f4fd;
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+            font-size: 1.1em;
+            font-weight: bold;
+            margin-bottom: 20px;
+            min-height: 55px; /* Verhindert Springen des Layouts */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 1.1em;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background-color: #1a5276;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Bruch-Memory</h1>
+    <div class="task-description">
+        Finde die passenden Paare: Ordne jeden Bruch (Zahl) dem richtigen Diagramm (Bild) zu!
+    </div>
+
+    <div class="game-board" id="gameBoard">
+        </div>
+
+    <div class="feedback-panel" id="feedback">
+        Klicke auf zwei Karten, um das Spiel zu starten.
+    </div>
+
+    <button onclick="initGame()">Spiel neu starten</button>
+</div>
+
+<script>
+    /* --- JAVASCRIPT (Logik & Generierung) --- */
+
+    // Definition der 8 Paare (16 Karten insgesamt)
+    const pairsDefinition = [
+        // Kreisdiagramme für einfache Brüche
+        { id: 1, n: 1, d: 2, type: 'pie', percent: 50 },
+        { id: 2, n: 1, d: 4, type: 'pie', percent: 25 },
+        { id: 3, n: 3, d: 4, type: 'pie', percent: 75 },
+        { id: 4, n: 1, d: 3, type: 'pie', percent: 33.33 },
+        // Rechteckdiagramme für zählbare Brüche
+        { id: 5, n: 2, d: 3, type: 'grid', cols: 3, rows: 1, filled: 2 },
+        { id: 6, n: 2, d: 5, type: 'grid', cols: 5, rows: 1, filled: 2 },
+        { id: 7, n: 3, d: 8, type: 'grid', cols: 4, rows: 2, filled: 3 },
+        { id: 8, n: 5, d: 6, type: 'grid', cols: 3, rows: 2, filled: 5 }
+    ];
+
+    let cards = [];
+    let flippedCards = [];
+    let matchedPairs = 0;
+    let lockBoard = false;
+
+    // Initialisiert oder setzt das Spiel zurück
+    function initGame() {
+        const board = document.getElementById('gameBoard');
+        const feedback = document.getElementById('feedback');
+        board.innerHTML = '';
+        cards = [];
+        flippedCards = [];
+        matchedPairs = 0;
+        lockBoard = false;
+        feedback.innerText = 'Klicke auf zwei Karten, um das Spiel zu starten.';
+        feedback.style.backgroundColor = '#e8f4fd';
+        feedback.style.borderColor = 'var(--primary-color)';
+        feedback.style.color = 'var(--primary-color)';
+
+        // Karten-Array aufbauen (1 Textkarte, 1 Bildkarte pro ID)
+        pairsDefinition.forEach(pair => {
+            cards.push({ pairId: pair.id, format: 'text', data: pair });
+            cards.push({ pairId: pair.id, format: 'visual', data: pair });
+        });
+
+        // Fisher-Yates Shuffle (Mischen)
+        for (let i = cards.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [cards[i], cards[j]] = [cards[j], cards[i]];
+        }
+
+        // Karten ins HTML rendern
+        cards.forEach((card, index) => {
+            const cardElement = document.createElement('div');
+            cardElement.classList.add('card');
+            cardElement.dataset.index = index;
+            cardElement.dataset.pairId = card.pairId;
+            cardElement.addEventListener('click', onCardClick);
+
+            const inner = document.createElement('div');
+            inner.classList.add('card-inner');
+
+            const front = document.createElement('div');
+            front.classList.add('card-front');
+
+            const back = document.createElement('div');
+            back.classList.add('card-back');
+
+            // Inhalt der Rückseite generieren
+            if (card.format === 'text') {
+                back.innerHTML = createFractionHTML(card.data.n, card.data.d);
+            } else {
+                back.innerHTML = createVisualHTML(card.data);
+            }
+
+            inner.appendChild(front);
+            inner.appendChild(back);
+            cardElement.appendChild(inner);
+            board.appendChild(cardElement);
+        });
+    }
+
+    // Erstellt das HTML für den Bruch als Zahl
+    function createFractionHTML(n, d) {
+        return `
+            <div class="fraction-text">
+                <span>${n}</span>
+                <span class="divider"></span>
+                <span>${d}</span>
+            </div>
+        `;
+    }
+
+    // Erstellt das HTML für das Diagramm per CSS
+    function createVisualHTML(data) {
+        if (data.type === 'pie') {
+            // CSS Conic-Gradient zeichnet ein perfektes Tortendiagramm
+            return `<div class="shape-circle" style="background: conic-gradient(var(--visual-fill) 0% ${data.percent}%, var(--visual-empty) ${data.percent}% 100%);"></div>`;
+        } else if (data.type === 'grid') {
+            // CSS Grid zeichnet die Kästchen
+            let gridHTML = `<div class="shape-grid" style="grid-template-columns: repeat(${data.cols}, 1fr); grid-template-rows: repeat(${data.rows}, 1fr);">`;
+            const totalBoxes = data.cols * data.rows;
+            for (let i = 0; i < totalBoxes; i++) {
+                if (i < data.filled) {
+                    gridHTML += `<div class="grid-part filled"></div>`;
+                } else {
+                    gridHTML += `<div class="grid-part"></div>`;
+                }
+            }
+            gridHTML += `</div>`;
+            return gridHTML;
+        }
+    }
+
+    // Klick-Logik
+    function onCardClick() {
+        if (lockBoard) return;
+        if (this.classList.contains('flipped') || this.classList.contains('matched')) return;
+
+        this.classList.add('flipped');
+        flippedCards.push(this);
+
+        if (flippedCards.length === 2) {
+            checkForMatch();
+        }
+    }
+
+    // Überprüft, ob das aufgedeckte Paar passt
+    function checkForMatch() {
+        lockBoard = true;
+        const card1 = flippedCards[0];
+        const card2 = flippedCards[1];
+
+        const isMatch = card1.dataset.pairId === card2.dataset.pairId;
+        const feedback = document.getElementById('feedback');
+
+        if (isMatch) {
+            setTimeout(() => {
+                card1.classList.add('matched');
+                card2.classList.add('matched');
+                matchedPairs++;
+                
+                // Pädagogisches Feedback
+                const matchedData = pairsDefinition.find(p => p.id == card1.dataset.pairId);
+                feedback.innerText = `Super! ${matchedData.n}/${matchedData.d} ist ein Paar.`;
+                
+                resetBoard();
+
+                // Gewinn-Abfrage
+                if (matchedPairs === 8) {
+                    feedback.innerText = "Herzlichen Glückwunsch! Du hast alle Brüche richtig zugeordnet! 🎉";
+                    feedback.style.backgroundColor = '#e8fdf5';
+                    feedback.style.borderColor = 'var(--accent-color)';
+                    feedback.style.color = 'var(--accent-color)';
+                }
+            }, 400); // Kurze Verzögerung für den visuellen Effekt
+        } else {
+            feedback.innerText = "Das passt leider nicht zusammen. Versuch es nochmal!";
+            setTimeout(() => {
+                card1.classList.remove('flipped');
+                card2.classList.remove('flipped');
+                resetBoard();
+            }, 1500); // 1,5 Sekunden Zeit zum Einprägen
+        }
+    }
+
+    function resetBoard() {
+        flippedCards = [];
+        lockBoard = false;
+    }
+
+    // Spiel beim Laden der Seite direkt starten
+    window.onload = initGame;
+
+</script>
+</body>
+</html>
