@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geobrett Memory</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;900&display=swap');
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* 3D Card Flipping Styles */
+        .perspective {
+            perspective: 1000px;
+        }
+        .transform-style-3d {
+            transform-style: preserve-3d;
+        }
+        .backface-hidden {
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+        }
+        .rotate-y-180 {
+            transform: rotateY(180deg);
+        }
+        
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        /* Animations for match and mismatch */
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7); transform: rotateY(180deg) scale(1); }
+            50% { box-shadow: 0 0 20px 10px rgba(74, 222, 128, 0); transform: rotateY(180deg) scale(1.05); }
+            100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); transform: rotateY(180deg) scale(1); }
+        }
+
+        @keyframes shake-red {
+            0%, 100% { transform: rotateY(180deg) translateX(0); }
+            20%, 60% { transform: rotateY(180deg) translateX(-10px); }
+            40%, 80% { transform: rotateY(180deg) translateX(10px); }
+        }
+
+        .matched .card-back {
+            border: 4px solid #4ade80;
+            animation: pulse-green 0.8s ease-out;
+            background-color: #dcfce7;
+        }
+
+        .mismatched .card-back {
+            border: 4px solid #f87171;
+            animation: shake-red 0.5s ease-in-out;
+            background-color: #fee2e2;
+        }
+
+        /* Geoboard Styles */
+        .geoboard-bg {
+            background-color: #F5DEB3; /* Holz/Tan Farbe */
+            border-radius: 8px;
+        }
+        
+        /* Grid Layout Anpassung für Responsive Design */
+        #game-board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            width: 100%;
+            max-width: 800px;
+            aspect-ratio: 1 / 1;
+        }
+
+        @media (max-width: 600px) {
+            #game-board {
+                gap: 8px;
+            }
+            .card-text {
+                font-size: 0.8rem;
+                line-height: 1.1;
+            }
+        }
+        
+        @media (min-width: 601px) {
+            .card-text {
+                font-size: 1.1rem;
+                line-height: 1.3;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="text-center mb-6">
+        <h1 class="text-4xl md:text-5xl font-black text-blue-800 drop-shadow-md mb-2">Geobrett Memory</h1>
+        <p class="text-lg md:text-xl text-blue-900 font-bold">Finde das passende Bild zum Text!</p>
+    </div>
+
+    <!-- Spielfeld -->
+    <div id="game-board" class="perspective">
+        <!-- Karten werden hier von JavaScript generiert -->
+    </div>
+
+    <!-- Modales Fenster (Erfolgsmeldung am Ende) -->
+    <div id="win-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-3xl p-8 text-center shadow-2xl transform scale-90 transition-transform duration-300 max-w-sm w-full mx-4" id="win-modal-content">
+            <div class="text-6xl mb-4">🎉</div>
+            <h2 class="text-3xl font-black text-green-600 mb-4">Klasse gemacht!</h2>
+            <p class="text-xl text-gray-700 mb-6 font-bold">Du hast alle Paare gefunden!</p>
+            <button onclick="resetGame()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-full text-xl shadow-lg transform transition hover:scale-105 active:scale-95 w-full">
+                Nochmal spielen
+            </button>
+        </div>
+    </div>
+
+<script>
+    // Definition der Geobrett-Pfade für ein 6x6 Raster (0-5), spacing 20, offset 10.
+    // Koordinatenberechnung: X = 10 + x*20, Y = 10 + y*20
+    const cardData = [
+        {
+            id: 1,
+            type: 'text',
+            content: 'Ich bin weder Dreieck, noch Viereck.'
+        },
+        {
+            id: 1,
+            type: 'image',
+            path: 'M 50 30 L 90 30 L 110 70 L 70 110 L 30 70 Z',
+            color: '#FF3366' // Pink
+        },
+        {
+            id: 2,
+            type: 'text',
+            content: 'Ich habe eine Seitenlänge, die ist das dreifache einer anderen.'
+        },
+        {
+            id: 2,
+            type: 'image',
+            path: 'M 30 30 L 30 90 L 90 90 Z', // Kathete 1 (x: 30-90 = 3 Einheiten) und Kathete 2 (y: 30-90 = 3 Einheiten) - Warten, Text sagt "dreifache", also 1x3!
+            // Korrektur: 1x3 Rechtwinkliges Dreieck (X: 30 bis 50 = 1 Einheit, Y: 30 bis 90 = 3 Einheiten)
+            path: 'M 30 30 L 30 90 L 50 90 Z',
+            color: '#33CCFF' // Hellblau
+        },
+        {
+            id: 3,
+            type: 'text',
+            content: 'Ich bin insgesamt 5 Quadrate.'
+        },
+        {
+            id: 3,
+            type: 'image',
+            path: 'M 30 30 L 70 30 L 70 70 L 30 70 Z M 50 30 L 50 70 M 30 50 L 70 50', // 2x2 mit Kreuz
+            color: '#9933FF' // Lila
+        },
+        {
+            id: 4,
+            type: 'text',
+            content: 'Ich bin ein Rechteck, und zwei Seiten sind 4 mal so lang wie die anderen zwei.'
+        },
+        {
+            id: 4,
+            type: 'image',
+            path: 'M 30 30 L 110 30 L 110 50 L 30 50 Z', // 1x4 Rechteck
+            color: '#FF9900' // Orange
+        },
+        {
+            id: 5,
+            type: 'text',
+            content: 'In mir haben 12 kleine Quadrate mit der Seitenlänge 1 Platz.'
+        },
+        {
+            id: 5,
+            type: 'image',
+            path: 'M 30 30 L 90 30 L 90 110 L 30 110 Z', // 3x4 Rechteck
+            color: '#00CC66' // Grün
+        },
+        {
+            id: 6,
+            type: 'text',
+            content: 'Ich bin 5 Dreiecke in einem.'
+        },
+        {
+            id: 6,
+            type: 'image',
+            path: 'M 30 90 L 110 90 L 70 10 Z M 70 90 L 90 50 L 50 50 Z', // Großes Dreieck mit Mittelpunkten verbunden
+            color: '#FFCC00' // Gelb
+        },
+        {
+            id: 7,
+            type: 'text',
+            content: 'Meine vier Seitenlängen addiert ergibt 10.'
+        },
+        {
+            id: 7,
+            type: 'image',
+            path: 'M 30 30 L 90 30 L 90 70 L 30 70 Z', // 2x3 Rechteck (Umfang = 2+3+2+3 = 10)
+            color: '#FF3333' // Rot
+        },
+        {
+            id: 8,
+            type: 'text',
+            content: 'Mich kann man aus 4 rechtwinkligen Dreiecken zusammenbauen.'
+        },
+        {
+            id: 8,
+            type: 'image',
+            path: 'M 30 50 L 70 50 L 70 70 L 30 70 Z M 50 50 L 50 70 M 30 50 L 50 70 M 70 50 L 50 70', // 2x1 Rechteck, mittig geteilt, plus zwei Diagonalen
+            color: '#3333CC' // Dunkelblau
+        }
+    ];
+
+    let cards = [];
+    let flippedCards = [];
+    let matchedPairs = 0;
+    let isBoardLocked = false;
+
+    function generateGeoboardSVG(path, color) {
+        let svg = `<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" class="w-full h-full geoboard-bg shadow-inner p-1">`;
+        
+        // Nägel (Raster) zeichnen
+        for (let i = 0; i < 6; i++) {
+            for (let j = 0; j < 6; j++) {
+                let cx = 10 + i * 20;
+                let cy = 10 + j * 20;
+                // Schatten und Nagel
+                svg += `<circle cx="${cx + 0.5}" cy="${cy + 1.5}" r="2" fill="rgba(0,0,0,0.3)" />`;
+                svg += `<circle cx="${cx}" cy="${cy}" r="2" fill="#d4af37" />`;
+                svg += `<circle cx="${cx - 0.5}" cy="${cy - 0.5}" r="1" fill="#fff8e7" />`;
+            }
+        }
+        
+        // Gummiband zeichnen
+        svg += `<path d="${path}" fill="rgba(${hexToRgb(color)}, 0.15)" stroke="${color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(1px 2px 2px rgba(0,0,0,0.4));" />`;
+        svg += `</svg>`;
+        return svg;
+    }
+
+    // Hilfsfunktion zur Farbumwandlung für Flächenfüllung
+    function hexToRgb(hex) {
+        let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? 
+            `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` 
+            : '255,255,255';
+    }
+
+    function initGame() {
+        const board = document.getElementById('game-board');
+        board.innerHTML = '';
+        cards = [...cardData];
+        // Mischen der Karten
+        cards.sort(() => Math.random() - 0.5);
+        matchedPairs = 0;
+        flippedCards = [];
+        isBoardLocked = false;
+
+        cards.forEach((card, index) => {
+            let cardContent = '';
+            if (card.type === 'text') {
+                cardContent = `<div class="w-full h-full flex items-center justify-center p-2 md:p-4 text-center card-text font-bold text-gray-700 bg-white rounded-xl shadow-inner break-words hyphens-auto" lang="de">${card.content}</div>`;
+            } else {
+                cardContent = `<div class="w-full h-full flex items-center justify-center bg-white rounded-xl shadow-inner p-2">${generateGeoboardSVG(card.path, card.color)}</div>`;
+            }
+
+            const cardHTML = `
+                <div class="card w-full h-full relative cursor-pointer group" data-id="${card.id}" data-index="${index}" onclick="flipCard(this)">
+                    <div class="card-inner w-full h-full absolute transition-transform duration-500 transform-style-3d shadow-lg rounded-xl">
+                        <!-- Rückseite der Karte (Muster / Cover) -->
+                        <div class="card-front absolute w-full h-full backface-hidden bg-blue-400 rounded-xl flex items-center justify-center border-4 border-blue-500 hover:bg-blue-300 transition-colors">
+                            <div class="w-12 h-12 md:w-16 md:h-16 rounded-full bg-white opacity-40 flex items-center justify-center">
+                                <span class="text-2xl md:text-4xl text-blue-600 font-black">?</span>
+                            </div>
+                        </div>
+                        <!-- Vorderseite der Karte (Inhalt) -->
+                        <div class="card-back absolute w-full h-full backface-hidden rotate-y-180 bg-white rounded-xl border-4 border-gray-200">
+                            ${cardContent}
+                        </div>
+                    </div>
+                </div>
+            `;
+            board.insertAdjacentHTML('beforeend', cardHTML);
+        });
+    }
+
+    function flipCard(cardElement) {
+        if (isBoardLocked) return;
+        
+        // Wenn bereits 2 Karten offen sind (falsches Paar aus dem vorherigen Zug)
+        // -> Beim nächsten Klick werden sie umgedreht, bevor die neue Karte aufgedeckt wird.
+        if (flippedCards.length === 2) {
+            const [card1, card2] = flippedCards;
+            
+            // Karten wieder verdecken und Markierungen entfernen
+            card1.classList.remove('flipped', 'mismatched');
+            card2.classList.remove('flipped', 'mismatched');
+            flippedCards = [];
+            
+            // Wenn der Spieler auf eine der gerade offenen (falschen) Karten klickt,
+            // drehen wir diese nur um und brechen ab, damit sie nicht direkt wieder aufploppt.
+            if (cardElement === card1 || cardElement === card2) {
+                return;
+            }
+        }
+
+        // Eine bereits umgedrehte oder gelöste Karte ignorieren
+        if (cardElement.classList.contains('flipped')) return;
+
+        cardElement.classList.add('flipped');
+        flippedCards.push(cardElement);
+
+        if (flippedCards.length === 2) {
+            checkForMatch();
+        }
+    }
+
+    function checkForMatch() {
+        const [card1, card2] = flippedCards;
+        const id1 = card1.getAttribute('data-id');
+        const id2 = card2.getAttribute('data-id');
+
+        if (id1 === id2) {
+            // Richtiges Paar gefunden
+            isBoardLocked = true; // Sperre kurz für die Animation
+            setTimeout(() => {
+                card1.classList.add('matched');
+                card2.classList.add('matched');
+                matchedPairs++;
+                resetBoard();
+                if (matchedPairs === 8) {
+                    showWinModal();
+                }
+            }, 300); // Kurz warten, damit das Umdrehen abgeschlossen ist
+        } else {
+            // Falsches Paar
+            // Karten rot markieren (Wackeln-Animation wird per CSS ausgelöst)
+            setTimeout(() => {
+                card1.classList.add('mismatched');
+                card2.classList.add('mismatched');
+            }, 300);
+            
+            // WICHTIG: Hier gibt es jetzt kein setTimeout mehr, das die Karten automatisch umdreht!
+            // Das Array `flippedCards` behält die 2 Karten, bis `flipCard` wieder aufgerufen wird.
+        }
+    }
+
+    function resetBoard() {
+        flippedCards = [];
+        isBoardLocked = false;
+    }
+
+    function showWinModal() {
+        const modal = document.getElementById('win-modal');
+        const content = document.getElementById('win-modal-content');
+        modal.classList.remove('hidden');
+        
+        // Timeout für smoothe Transition
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            content.classList.remove('scale-90');
+            content.classList.add('scale-100');
+        }, 50);
+    }
+
+    function resetGame() {
+        const modal = document.getElementById('win-modal');
+        const content = document.getElementById('win-modal-content');
+        
+        modal.classList.add('opacity-0');
+        content.classList.remove('scale-100');
+        content.classList.add('scale-90');
+        
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            initGame();
+        }, 300);
+    }
+
+    // Spiel beim Laden der Seite starten
+    window.onload = initGame;
+</script>
+</body>
+</html>
